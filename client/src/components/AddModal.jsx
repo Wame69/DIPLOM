@@ -327,14 +327,14 @@ export default function AddModal({ onClose }) {
           margin: 0;
           font-size: 24px;
           font-weight: 700;
-          color: #1a1a1a;
+          color: #8B4513;
         }
 
         .close-button {
           background: none;
           border: none;
           font-size: 28px;
-          color: #666;
+          color: #8B7355;
           cursor: pointer;
           padding: 0;
           width: 32px;
@@ -347,8 +347,8 @@ export default function AddModal({ onClose }) {
         }
 
         .close-button:hover {
-          background: #f5f5f5;
-          color: #333;
+          background: rgba(160, 82, 45, 0.1);
+          color: #8B4513;
         }
 
         .modal-form {
@@ -371,24 +371,30 @@ export default function AddModal({ onClose }) {
           display: block;
           margin-bottom: 8px;
           font-weight: 600;
-          color: #333;
+          color: #8B4513;
           font-size: 14px;
         }
 
         .form-input, .form-select {
           width: 100%;
           padding: 12px 16px;
-          border: 2px solid #e1e5e9;
+          border: 2px solid rgba(210, 180, 140, 0.4);
           border-radius: 10px;
           font-size: 16px;
           transition: all 0.2s;
           background: white;
+          color: #8B7355;
         }
 
         .form-input:focus, .form-select:focus {
           outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+          border-color: #A0522D;
+          box-shadow: 0 0 0 3px rgba(160, 82, 45, 0.1);
+        }
+
+        .form-input::placeholder {
+          color: #8B7355;
+          opacity: 0.7;
         }
 
         .reminder-section {
@@ -423,7 +429,7 @@ export default function AddModal({ onClose }) {
         .radio-input {
           width: 18px;
           height: 18px;
-          border: 2px solid #ddd;
+          border: 2px solid rgba(210, 180, 140, 0.6);
           border-radius: 50%;
           appearance: none;
           margin: 0;
@@ -434,8 +440,8 @@ export default function AddModal({ onClose }) {
         }
 
         .radio-input:checked {
-          background: #007bff;
-          border-color: #007bff;
+          background: #A0522D;
+          border-color: #A0522D;
         }
 
         .radio-input:checked::after {
@@ -452,7 +458,7 @@ export default function AddModal({ onClose }) {
 
         .checkbox-label {
           font-size: 14px;
-          color: #333;
+          color: #8B7355;
           white-space: nowrap;
         }
 
@@ -464,18 +470,24 @@ export default function AddModal({ onClose }) {
         .custom-reminder-input {
           width: 100%;
           padding: 10px 12px;
-          border: 2px solid #e1e5e9;
+          border: 2px solid rgba(210, 180, 140, 0.4);
           border-radius: 8px;
           font-size: 14px;
           text-align: center;
           transition: all 0.2s;
           background: white;
+          color: #8B7355;
         }
 
         .custom-reminder-input:focus {
           outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+          border-color: #A0522D;
+          box-shadow: 0 0 0 2px rgba(160, 82, 45, 0.1);
+        }
+
+        .custom-reminder-input::placeholder {
+          color: #8B7355;
+          opacity: 0.7;
         }
 
         .modal-actions {
@@ -484,7 +496,7 @@ export default function AddModal({ onClose }) {
           justify-content: flex-end;
           margin-top: 32px;
           padding-top: 20px;
-          border-top: 1px solid #f0f0f0;
+          border-top: 1px solid rgba(210, 180, 140, 0.3);
         }
 
         .btn {
@@ -499,22 +511,26 @@ export default function AddModal({ onClose }) {
         }
 
         .btn-save {
-          background: #007bff;
+          background: linear-gradient(135deg, #A0522D, #8B4513);
           color: white;
         }
 
         .btn-save:hover {
-          background: #0056b3;
+          background: linear-gradient(135deg, #8B4513, #A0522D);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
         }
 
         .btn-cancel {
           background: white;
-          color: #666;
-          border: 2px solid #e1e5e9;
+          color: #8B7355;
+          border: 2px solid rgba(210, 180, 140, 0.4);
         }
 
         .btn-cancel:hover {
-          background: #f8f9fa;
+          background: rgba(160, 82, 45, 0.1);
+          color: #8B4513;
+          border-color: #A0522D;
         }
 
         @media (max-width: 768px) {

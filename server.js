@@ -440,5 +440,92 @@ cron.schedule('0 * * * *', async () => {
   } catch (e) { console.error('cron error', e); }
 });
 
+// server.js (дополнения к существующему коду)
+// Добавим новые эндпоинты для AI помощника и уведомлений
+
+// AI Assistant endpoint
+app.post('/api/ai/analyze', authMiddleware, async (req, res) => {
+  try {
+    const { message, context } = req.body;
+    
+    // Имитация AI анализа
+    const analysis = {
+      suggestions: [
+        {
+          type: 'optimization',
+          title: 'Оптимизация подписок',
+          message: 'Мы нашли 2 подписки, которые можно объединить',
+          confidence: 0.85
+        },
+        {
+          type: 'savings',
+          title: 'Возможность экономии',
+          message: 'Вы можете сэкономить до 15% перейдя на годовые тарифы',
+          confidence: 0.92
+        }
+      ],
+      response: `На основе анализа ваших подписок, я рекомендую рассмотреть возможность объединения похожих сервисов. Также обратите внимание на годовые тарифы - они часто выгоднее месячных.`
+    };
+    
+    res.json(analysis);
+  } catch (e) {
+    console.error('AI analysis error:', e);
+    res.status(500).json({ error: 'AI service unavailable' });
+  }
+});
+
+// Notifications endpoint
+app.get('/api/notifications', authMiddleware, async (req, res) => {
+  try {
+    const notifications = await db.all(`
+      SELECT * FROM notifications_log 
+      WHERE user_id = ? 
+      ORDER BY sent_at DESC 
+      LIMIT 50
+    `, req.user.id);
+    
+    res.json({ notifications });
+  } catch (e) {
+    console.error('Notifications error:', e);
+    res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+
+// User preferences endpoint
+app.put('/api/user/preferences', authMiddleware, async (req, res) => {
+  try {
+    const { theme, language, notifications, currency } = req.body;
+    
+    // Здесь можно сохранить настройки в отдельную таблицу
+    // Пока просто возвращаем успех
+    res.json({ ok: true, message: 'Preferences updated' });
+  } catch (e) {
+    console.error('Preferences update error:', e);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+// Voice commands processing
+app.post('/api/voice/command', authMiddleware, async (req, res) => {
+  try {
+    const { command } = req.body;
+    
+    const responses = {
+      'добавить подписку': { action: 'add_subscription', message: 'Открываю форму добавления подписки' },
+      'показать статистику': { action: 'show_stats', message: 'Перехожу к статистике' },
+      'сколько я трачу': { action: 'show_total', message: 'Показываю общие расходы' },
+      'ближайшие списания': { action: 'show_upcoming', message: 'Показываю ближайшие платежи' }
+    };
+    
+    const response = responses[command.toLowerCase()] || 
+      { action: 'unknown', message: 'Не понял команду. Попробуйте сказать "добавить подписку" или "показать статистику"' };
+    
+    res.json(response);
+  } catch (e) {
+    console.error('Voice command error:', e);
+    res.status(500).json({ error: 'Voice command processing failed' });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🚀 Backend listening on port ${PORT}`));

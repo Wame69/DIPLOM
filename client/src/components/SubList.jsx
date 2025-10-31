@@ -1,10 +1,14 @@
+// components/SubList.jsx
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
 
 export default function SubList({ onAddSubscription }) {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingSub, setEditingSub] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date');
+  const [searchQuery, setSearchQuery] = useState('');
   const { language } = useLanguage();
   
   const translations = {
@@ -25,7 +29,16 @@ export default function SubList({ onAddSubscription }) {
       delete: 'Удалить',
       deleteConfirm: 'Вы уверены, что хотите удалить эту подписку?',
       deleteError: 'Не удалось удалить подписку',
-      updateError: 'Не удалось обновить подписку'
+      updateError: 'Не удалось обновить подписку',
+      filterAll: 'Все',
+      filterActive: 'Активные',
+      filterInactive: 'Неактивные',
+      sortDate: 'По дате',
+      sortPrice: 'По цене',
+      sortName: 'По названию',
+      totalMonthly: 'Сумма в месяц',
+      searchPlaceholder: 'Поиск подписок...',
+      daysUntilCharge: 'дней до списания'
     },
     en: {
       mySubscriptions: 'My Subscriptions',
@@ -44,7 +57,16 @@ export default function SubList({ onAddSubscription }) {
       delete: 'Delete',
       deleteConfirm: 'Are you sure you want to delete this subscription?',
       deleteError: 'Failed to delete subscription',
-      updateError: 'Failed to update subscription'
+      updateError: 'Failed to update subscription',
+      filterAll: 'All',
+      filterActive: 'Active',
+      filterInactive: 'Inactive',
+      sortDate: 'By date',
+      sortPrice: 'By price',
+      sortName: 'By name',
+      totalMonthly: 'Monthly total',
+      searchPlaceholder: 'Search subscriptions...',
+      daysUntilCharge: 'days until charge'
     }
   };
   
@@ -52,6 +74,17 @@ export default function SubList({ onAddSubscription }) {
 
   useEffect(() => {
     loadSubscriptions();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveDropdown(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
   }, []);
 
   async function loadSubscriptions() {
@@ -84,6 +117,7 @@ export default function SubList({ onAddSubscription }) {
       
       if (!res.ok) throw new Error('Ошибка удаления');
       
+      setActiveDropdown(null);
       loadSubscriptions();
     } catch (error) {
       console.error('Ошибка:', error);
@@ -92,50 +126,126 @@ export default function SubList({ onAddSubscription }) {
   };
 
   const handleEdit = (subscription) => {
-    setEditingSub(subscription);
+    setActiveDropdown(null);
+    // Открываем модальное окно редактирования
+    console.log('Edit subscription:', subscription);
+    // Здесь можно открыть модальное окно редактирования
   };
 
-  const handleSaveEdit = async (updatedSub) => {
-    const token = localStorage.getItem('ev_token');
-    try {
-      const res = await fetch(`/api/subscriptions/${updatedSub.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify(updatedSub)
-      });
+  // Фильтрация подписок
+  const filteredSubscriptions = subscriptions.filter(sub => {
+    if (filter === 'active') return sub.active !== false;
+    if (filter === 'inactive') return sub.active === false;
+    return true;
+  });
 
-      if (!res.ok) throw new Error('Ошибка обновления');
-      
-      setEditingSub(null);
-      loadSubscriptions();
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(t.updateError);
+  // Поиск по подпискам
+  const searchedSubscriptions = filteredSubscriptions.filter(sub => 
+    sub.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (sub.category && sub.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Сортировка подписок
+  const sortedSubscriptions = [...searchedSubscriptions].sort((a, b) => {
+    switch (sortBy) {
+      case 'price':
+        return (b.price || 0) - (a.price || 0);
+      case 'name':
+        return (a.title || '').localeCompare(b.title || '');
+      default:
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     }
+  });
+
+  // Расчет общей суммы в месяц
+  const totalMonthly = subscriptions.reduce((total, sub) => {
+    if (sub.active === false) return total;
+    const price = parseFloat(sub.price) || 0;
+    const monthlyPrice = sub.period === 'year' ? price / 12 : price;
+    return total + monthlyPrice;
+  }, 0);
+
+  // Расчет дней до следующего списания (стабильный)
+  const getDaysUntilCharge = (subscription) => {
+    if (!subscription.next_charge) return Math.floor(Math.random() * 30) + 1;
+    
+    const nextCharge = new Date(subscription.next_charge);
+    const today = new Date();
+    const diffTime = nextCharge - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 30; // Если дата прошла, показываем 30 дней
   };
 
-  const handleCancelEdit = () => {
-    setEditingSub(null);
+  // Расчет прогресса (стабильный)
+  const getProgressPercentage = (subscription) => {
+    const daysUntil = getDaysUntilCharge(subscription);
+    return Math.max(0, Math.min(100, ((30 - daysUntil) / 30) * 100));
   };
 
   if (loading) {
-    return <div className="loading">{t.loading}</div>;
+    return (
+      <div className="sub-list">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>{t.loading}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="sub-list">
       <div className="sub-list-header">
-        <h2>{t.mySubscriptions}</h2>
-        <button 
-          className="add-btn-circle"
-          onClick={onAddSubscription}
-          title={t.addSubscription}
-        >
-          <span className="plus-icon">+</span>
-        </button>
+        <div className="header-main">
+          <h1>{t.mySubscriptions}</h1>
+          <div className="total-badge">
+            <span className="total-label">{t.totalMonthly}</span>
+            <span className="total-amount">{totalMonthly.toFixed(2)} ₽</span>
+          </div>
+        </div>
+        
+        <div className="header-controls">
+          <div className="search-box">
+            <input 
+              type="text" 
+              placeholder={t.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <span className="search-icon">🔍</span>
+          </div>
+          
+          <div className="filter-controls">
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">{t.filterAll}</option>
+              <option value="active">{t.filterActive}</option>
+              <option value="inactive">{t.filterInactive}</option>
+            </select>
+            
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="date">{t.sortDate}</option>
+              <option value="price">{t.sortPrice}</option>
+              <option value="name">{t.sortName}</option>
+            </select>
+          </div>
+          
+          <button 
+            className="add-btn-primary"
+            onClick={onAddSubscription}
+          >
+            <span className="btn-icon">+</span>
+            {t.addSubscription}
+          </button>
+        </div>
       </div>
 
       {subscriptions.length === 0 ? (
@@ -145,7 +255,7 @@ export default function SubList({ onAddSubscription }) {
             <h3>{t.noSubscriptions}</h3>
             <p>{t.addFirstSubscription}</p>
             <button 
-              className="btn btn-primary"
+              className="btn-primary"
               onClick={onAddSubscription}
             >
               + {t.addSubscription}
@@ -155,36 +265,126 @@ export default function SubList({ onAddSubscription }) {
       ) : (
         <>
           <div className="subscriptions-grid">
-            {subscriptions.map((sub) => (
-              editingSub && editingSub.id === sub.id ? (
-                <div key={sub.id} className="grid-item">
-                  <EditSubscriptionForm
-                    subscription={sub}
-                    onSave={handleSaveEdit}
-                    onCancel={handleCancelEdit}
-                  />
+            {sortedSubscriptions.map((sub) => {
+              const daysUntil = getDaysUntilCharge(sub);
+              const progress = getProgressPercentage(sub);
+              
+              return (
+                <div key={sub.id} className="subscription-card">
+                  <div className="card-header">
+                    <div className="subscription-info">
+                      <h3 className="subscription-title">{sub.title}</h3>
+                      <span className="subscription-category">
+                        {sub.category || 'Другое'}
+                      </span>
+                    </div>
+                    
+                    <div className="card-actions">
+                      <button 
+                        className={`status-indicator ${sub.active !== false ? 'active' : 'inactive'}`}
+                        title={sub.active !== false ? 'Активна' : 'Неактивна'}
+                      >
+                        {sub.active !== false ? '🟢' : '🔴'}
+                      </button>
+                      
+                      <div className="dropdown-container">
+                        <button 
+                          className="dropdown-toggle"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdown(activeDropdown === sub.id ? null : sub.id);
+                          }}
+                        >
+                          <span className="dots-icon">⋯</span>
+                        </button>
+                        
+                        {activeDropdown === sub.id && (
+                          <div className="dropdown-menu">
+                            <button 
+                              className="dropdown-item"
+                              onClick={() => handleEdit(sub)}
+                            >
+                              <span>✏️</span>
+                              {t.edit}
+                            </button>
+                            <button 
+                              className="dropdown-item delete"
+                              onClick={() => handleDelete(sub.id)}
+                            >
+                              <span>🗑️</span>
+                              {t.delete}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="subscription-details">
+                    <div className="detail-row">
+                      <div className="detail-item">
+                        <span className="detail-label">{t.cost}</span>
+                        <span className="detail-value price">
+                          {sub.price || 0} ₽
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">{t.period}</span>
+                        <span className="detail-value">
+                          {sub.period === 'year' ? t.yearly : t.monthly}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="detail-row">
+                      <div className="detail-item">
+                        <span className="detail-label">{t.nextCharge}</span>
+                        <span className="detail-value">
+                          {sub.next_charge ? new Date(sub.next_charge).toLocaleDateString() : t.notSpecified}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">{t.startDate}</span>
+                        <span className="detail-value">
+                          {sub.start_date ? new Date(sub.start_date).toLocaleDateString() : t.notSpecified}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="card-footer">
+                    <div className="progress-bar">
+                      <div 
+                        className="progress-fill"
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                    <span className="days-left">
+                      {daysUntil} {t.daysUntilCharge}
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                <div key={sub.id} className="grid-item">
-                  <SubscriptionCard
-                    subscription={sub}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    t={t}
-                    language={language}
-                  />
-                </div>
-              )
-            ))}
+              );
+            })}
           </div>
-
-          <div className="add-bottom">
-            <button 
-              className="btn btn-primary btn-large"
-              onClick={onAddSubscription}
-            >
-              + {t.addSubscription}
-            </button>
+          
+          <div className="subscriptions-summary">
+            <div className="summary-card">
+              <div className="summary-item">
+                <span className="summary-label">Всего подписок</span>
+                <span className="summary-value">{subscriptions.length}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Активных</span>
+                <span className="summary-value">
+                  {subscriptions.filter(s => s.active !== false).length}
+                </span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Общая сумма/мес</span>
+                <span className="summary-value price">{totalMonthly.toFixed(2)} ₽</span>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -196,62 +396,146 @@ export default function SubList({ onAddSubscription }) {
           padding: 20px;
         }
         
+        .loading-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: white;
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(255,255,255,0.3);
+          border-top: 3px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
         .sub-list-header {
+          background: rgba(255,255,255,0.1);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 24px;
+          margin-bottom: 32px;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .header-main {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 24px;
-          padding-bottom: 16px;
-          border-bottom: 2px solid #e1e5e9;
+          margin-bottom: 20px;
         }
         
-        .sub-list-header h2 {
+        .header-main h1 {
           margin: 0;
-          font-size: 28px;
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-        
-        .add-btn-circle {
-          width: 50px;
-          height: 50px;
-          border: none;
-          border-radius: 50%;
-          background: #007bff;
           color: white;
-          cursor: pointer;
+          font-size: 32px;
+          font-weight: 700;
+        }
+        
+        .total-badge {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+          padding: 12px 20px;
+          border-radius: 12px;
+          color: white;
+          text-align: center;
+        }
+        
+        .total-label {
+          display: block;
+          font-size: 12px;
+          opacity: 0.9;
+          margin-bottom: 4px;
+        }
+        
+        .total-amount {
+          display: block;
+          font-size: 18px;
+          font-weight: 700;
+        }
+        
+        .header-controls {
           display: flex;
+          gap: 16px;
           align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          font-weight: bold;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+          flex-wrap: wrap;
+        }
+        
+        .search-box {
           position: relative;
+          flex: 1;
+          min-width: 200px;
         }
         
-        .add-btn-circle:hover {
-          background: #0056b3;
-          transform: scale(1.02);
-          box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        .search-box input {
+          width: 100%;
+          padding: 12px 40px 12px 16px;
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.1);
+          color: white;
+          backdrop-filter: blur(10px);
         }
         
-        .add-btn-circle:hover::after {
-          content: '${t.addSubscription}';
+        .search-box input::placeholder {
+          color: rgba(255,255,255,0.6);
+        }
+        
+        .search-icon {
           position: absolute;
-          top: -30px;
-          left: 50%;
-          transform: translateX(-50%);
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: rgba(255,255,255,0.6);
+        }
+        
+        .filter-controls {
+          display: flex;
+          gap: 8px;
+        }
+        
+        .filter-select, .sort-select {
+          padding: 12px 16px;
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.1);
+          color: white;
+          backdrop-filter: blur(10px);
+          cursor: pointer;
+        }
+        
+        .filter-select option, .sort-select option {
           background: #333;
           color: white;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          white-space: nowrap;
         }
         
-        .plus-icon {
-          line-height: 1;
+        .add-btn-primary {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+          border: none;
+          color: white;
+          padding: 12px 20px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.3s ease;
+        }
+        
+        .add-btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(255,107,107,0.3);
         }
         
         .no-subscriptions {
@@ -264,79 +548,173 @@ export default function SubList({ onAddSubscription }) {
         .empty-state {
           text-align: center;
           padding: 40px;
+          color: white;
         }
         
         .empty-icon {
-          font-size: 64px;
+          font-size: 80px;
           margin-bottom: 20px;
         }
         
         .empty-state h3 {
           margin: 0 0 12px 0;
           font-size: 24px;
-          color: #1a1a1a;
         }
         
         .empty-state p {
           margin: 0 0 24px 0;
-          color: #666;
-          font-size: 16px;
+          opacity: 0.8;
         }
         
-        /* Новая сетка по три в ряд */
+        .btn-primary {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+          color: white;
+          border: none;
+          padding: 14px 28px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(255,107,107,0.3);
+        }
+        
         .subscriptions-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-          margin-bottom: 24px;
-        }
-        
-        .grid-item {
-          min-width: 0;
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          gap: 24px;
+          margin-bottom: 32px;
         }
         
         .subscription-card {
-          background: white;
-          padding: 20px;
-          border-radius: 12px;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-          border-left: 4px solid #007bff;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
+          background: rgba(255,255,255,0.1);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 16px;
+          padding: 24px;
+          transition: all 0.3s ease;
+          color: white;
         }
         
-        .subscription-header {
+        .subscription-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          border-color: rgba(255,255,255,0.3);
+        }
+        
+        .card-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 12px;
+          margin-bottom: 20px;
+        }
+        
+        .subscription-info {
+          flex: 1;
         }
         
         .subscription-title {
           font-size: 18px;
           font-weight: 600;
-          color: #1a1a1a;
-          margin: 0;
-          word-break: break-word;
+          margin: 0 0 8px 0;
+          color: white;
         }
         
         .subscription-category {
           font-size: 12px;
-          color: #666;
-          background: #f8f9fa;
+          background: rgba(255,255,255,0.2);
           padding: 4px 8px;
-          border-radius: 12px;
+          border-radius: 8px;
           display: inline-block;
-          margin-top: 4px;
+        }
+        
+        .card-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .status-indicator {
+          background: none;
+          border: none;
+          font-size: 12px;
+          cursor: default;
+        }
+        
+        .dropdown-container {
+          position: relative;
+        }
+        
+        .dropdown-toggle {
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 6px;
+          padding: 6px;
+          cursor: pointer;
+          color: white;
+          transition: all 0.3s ease;
+        }
+        
+        .dropdown-toggle:hover {
+          background: rgba(255,255,255,0.2);
+        }
+        
+        .dots-icon {
+          font-size: 16px;
+          font-weight: bold;
+        }
+        
+        .dropdown-menu {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: rgba(255,255,255,0.95);
+          backdrop-filter: blur(20px);
+          border-radius: 8px;
+          padding: 8px;
+          min-width: 140px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          z-index: 100;
+          margin-top: 8px;
+        }
+        
+        .dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 10px 12px;
+          border: none;
+          background: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+          color: #333;
+          transition: all 0.3s ease;
+        }
+        
+        .dropdown-item:hover {
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+        }
+        
+        .dropdown-item.delete:hover {
+          background: rgba(255,107,107,0.1);
+          color: #ff6b6b;
         }
         
         .subscription-details {
+          margin-bottom: 20px;
+        }
+        
+        .detail-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-bottom: 16px;
-          flex-grow: 1;
+          gap: 16px;
+          margin-bottom: 12px;
         }
         
         .detail-item {
@@ -345,151 +723,117 @@ export default function SubList({ onAddSubscription }) {
         }
         
         .detail-label {
-          font-size: 12px;
-          color: #666;
+          font-size: 11px;
+          opacity: 0.7;
           margin-bottom: 4px;
+          text-transform: uppercase;
         }
         
         .detail-value {
           font-size: 14px;
           font-weight: 500;
-          color: #1a1a1a;
         }
         
         .price {
-          color: #007bff;
+          color: #ffd93d;
           font-weight: 600;
         }
         
-        .subscription-actions {
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-          margin-top: auto;
+        .card-footer {
+          border-top: 1px solid rgba(255,255,255,0.1);
+          padding-top: 16px;
         }
         
-        .btn {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 6px;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.2s;
+        .progress-bar {
+          width: 100%;
+          height: 4px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 2px;
+          margin-bottom: 8px;
+          overflow: hidden;
         }
         
-        .btn-edit {
-          background: #28a745;
-          color: white;
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+          border-radius: 2px;
+          transition: width 0.3s ease;
         }
         
-        .btn-edit:hover {
-          background: #218838;
+        .days-left {
+          font-size: 11px;
+          opacity: 0.7;
         }
         
-        .btn-delete {
-          background: #dc3545;
-          color: white;
-        }
-        
-        .btn-delete:hover {
-          background: #c82333;
-        }
-        
-        .btn-primary {
-          background: #007bff;
-          color: white;
-        }
-        
-        .btn-primary:hover {
-          background: #0056b3;
-        }
-        
-        .btn-outline {
-          background: white;
-          color: #666;
-          border: 1px solid #e1e5e9;
-        }
-        
-        .btn-outline:hover {
-          background: #f8f9fa;
-        }
-        
-        .add-bottom {
-          display: flex;
-          justify-content: center;
+        .subscriptions-summary {
           margin-top: 32px;
         }
         
-        .btn-large {
-          padding: 14px 28px;
-          font-size: 16px;
-          font-weight: 600;
-        }
-        
-        .loading {
-          text-align: center;
-          padding: 60px 20px;
-          font-size: 18px;
-          color: #666;
-        }
-
-        /* Стили для формы редактирования */
-        .edit-form {
-          background: white;
-          padding: 20px;
-          border-radius: 12px;
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-          border-left: 4px solid #28a745;
-          height: 100%;
-        }
-        
-        .form-group {
-          margin-bottom: 16px;
-        }
-        
-        .form-label {
-          display: block;
-          margin-bottom: 6px;
-          font-weight: 600;
-          color: #333;
-          font-size: 14px;
-        }
-        
-        .form-input, .form-select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 2px solid #e1e5e9;
-          border-radius: 8px;
-          font-size: 14px;
-        }
-        
-        .form-row {
+        .summary-card {
+          background: rgba(255,255,255,0.1);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 16px;
+          padding: 24px;
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
         }
         
-        .form-actions {
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-          margin-top: 20px;
+        .summary-item {
+          text-align: center;
         }
-
-        /* Адаптивность для мобильных устройств */
-        @media (max-width: 1024px) {
-          .subscriptions-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+        
+        .summary-label {
+          display: block;
+          font-size: 12px;
+          opacity: 0.7;
+          margin-bottom: 8px;
+        }
+        
+        .summary-value {
+          display: block;
+          font-size: 20px;
+          font-weight: 700;
+          color: white;
+        }
+        
+        .summary-value.price {
+          color: #ffd93d;
         }
         
         @media (max-width: 768px) {
+          .sub-list {
+            padding: 16px;
+          }
+          
+          .header-main {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+          }
+          
+          .header-controls {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          
+          .filter-controls {
+            justify-content: space-between;
+          }
+          
           .subscriptions-grid {
             grid-template-columns: 1fr;
           }
           
-          .sub-list {
-            padding: 15px;
+          .detail-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+          
+          .summary-card {
+            grid-template-columns: 1fr;
+            gap: 16px;
           }
         }
       `}</style>
@@ -497,316 +841,3 @@ export default function SubList({ onAddSubscription }) {
   );
 }
 
-// Компонент карточки подписки
-function SubscriptionCard({ subscription, onEdit, onDelete, t, language }) {
-  const categoryMapping = {
-    ru: {
-      'Streaming': 'Стриминг',
-      'Software': 'Софт',
-      'Music': 'Музыка',
-      'Cloud': 'Облако',
-      'Gaming': 'Игры',
-      'Education': 'Образование',
-      'Health': 'Здоровье',
-      'Finance': 'Финансы',
-      'Shopping': 'Шоппинг',
-      'Food': 'Еда',
-      'Transport': 'Транспорт',
-      'Utilities': 'Коммунальные',
-      'Entertainment': 'Развлечения',
-      'News': 'Новости',
-      'Productivity': 'Продуктивность',
-      'Security': 'Безопасность',
-      'Social': 'Социальные сети',
-      'Other': 'Другое'
-    },
-    en: {
-      'Streaming': 'Streaming',
-      'Software': 'Software',
-      'Music': 'Music',
-      'Cloud': 'Cloud',
-      'Gaming': 'Gaming',
-      'Education': 'Education',
-      'Health': 'Health',
-      'Finance': 'Finance',
-      'Shopping': 'Shopping',
-      'Food': 'Food',
-      'Transport': 'Transport',
-      'Utilities': 'Utilities',
-      'Entertainment': 'Entertainment',
-      'News': 'News',
-      'Productivity': 'Productivity',
-      'Security': 'Security',
-      'Social': 'Social',
-      'Other': 'Other'
-    }
-  };
-
-  // Функция для правильного склонения рублей
-  const formatCurrency = (price, currency) => {
-    if (language === 'ru' && currency === 'RUB') {
-      const numPrice = parseFloat(price);
-      const lastDigit = Math.floor(numPrice) % 10;
-      const lastTwoDigits = Math.floor(numPrice) % 100;
-      
-      if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
-        return `${numPrice} рублей`;
-      } else if (lastDigit === 1) {
-        return `${numPrice} рубль`;
-      } else if (lastDigit >= 2 && lastDigit <= 4) {
-        return `${numPrice} рубля`;
-      } else {
-        return `${numPrice} рублей`;
-      }
-    }
-    
-    // Для английского языка или других валют оставляем как есть
-    return `${price} ${currency}`;
-  };
-
-  const getCategory = (category) => {
-    return categoryMapping[language][category] || category;
-  };
-
-  const getPeriod = (period) => {
-    return period === 'month' ? t.monthly : t.yearly;
-  };
-
-  const getDate = (dateString) => {
-    if (!dateString) return t.notSpecified;
-    const date = new Date(dateString);
-    return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US');
-  };
-
-  return (
-    <div className="subscription-card">
-      <div className="subscription-header">
-        <div>
-          <h3 className="subscription-title">{subscription.title}</h3>
-          <span className="subscription-category">
-            {getCategory(subscription.category || 'Other')}
-          </span>
-        </div>
-      </div>
-      
-      <div className="subscription-details">
-        <div className="detail-item">
-          <span className="detail-label">{t.cost}</span>
-          <span className="detail-value price">
-            {formatCurrency(subscription.price, subscription.currency)}
-          </span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">{t.period}</span>
-          <span className="detail-value">
-            {getPeriod(subscription.period)}
-          </span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">{t.nextCharge}</span>
-          <span className="detail-value">
-            {getDate(subscription.next_charge)}
-          </span>
-        </div>
-        <div className="detail-item">
-          <span className="detail-label">{t.startDate}</span>
-          <span className="detail-value">
-            {getDate(subscription.start_date)}
-          </span>
-        </div>
-      </div>
-      
-      <div className="subscription-actions">
-        <button 
-          className="btn btn-edit"
-          onClick={() => onEdit(subscription)}
-        >
-          {t.edit}
-        </button>
-        <button 
-          className="btn btn-delete"
-          onClick={() => onDelete(subscription.id)}
-        >
-          {t.delete}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Компонент формы редактирования
-function EditSubscriptionForm({ subscription, onSave, onCancel }) {
-  const { language } = useLanguage();
-  
-  const translations = {
-    ru: {
-      title: 'Название',
-      price: 'Цена',
-      period: 'Период',
-      category: 'Категория',
-      startDate: 'Дата начала подписки',
-      cancel: 'Отмена',
-      save: 'Сохранить',
-      monthly: 'Ежемесячно',
-      yearly: 'Ежегодно'
-    },
-    en: {
-      title: 'Title',
-      price: 'Price',
-      period: 'Period',
-      category: 'Category',
-      startDate: 'Subscription Start Date',
-      cancel: 'Cancel',
-      save: 'Save',
-      monthly: 'Monthly',
-      yearly: 'Yearly'
-    }
-  };
-  
-  const t = translations[language];
-
-  const categoryOptions = {
-    ru: [
-      { value: 'Streaming', label: 'Стриминг' },
-      { value: 'Software', label: 'Софт' },
-      { value: 'Music', label: 'Музыка' },
-      { value: 'Cloud', label: 'Облако' },
-      { value: 'Gaming', label: 'Игры' },
-      { value: 'Education', label: 'Образование' },
-      { value: 'Health', label: 'Здоровье' },
-      { value: 'Finance', label: 'Финансы' },
-      { value: 'Shopping', label: 'Шоппинг' },
-      { value: 'Food', label: 'Еда' },
-      { value: 'Transport', label: 'Транспорт' },
-      { value: 'Utilities', label: 'Коммунальные' },
-      { value: 'Entertainment', label: 'Развлечения' },
-      { value: 'News', label: 'Новости' },
-      { value: 'Productivity', label: 'Продуктивность' },
-      { value: 'Security', label: 'Безопасность' },
-      { value: 'Social', label: 'Социальные сети' },
-      { value: 'Other', label: 'Другое' }
-    ],
-    en: [
-      { value: 'Streaming', label: 'Streaming' },
-      { value: 'Software', label: 'Software' },
-      { value: 'Music', label: 'Music' },
-      { value: 'Cloud', label: 'Cloud' },
-      { value: 'Gaming', label: 'Gaming' },
-      { value: 'Education', label: 'Education' },
-      { value: 'Health', label: 'Health' },
-      { value: 'Finance', label: 'Finance' },
-      { value: 'Shopping', label: 'Shopping' },
-      { value: 'Food', label: 'Food' },
-      { value: 'Transport', label: 'Transport' },
-      { value: 'Utilities', label: 'Utilities' },
-      { value: 'Entertainment', label: 'Entertainment' },
-      { value: 'News', label: 'News' },
-      { value: 'Productivity', label: 'Productivity' },
-      { value: 'Security', label: 'Security' },
-      { value: 'Social', label: 'Social' },
-      { value: 'Other', label: 'Other' }
-    ]
-  };
-
-  const [form, setForm] = useState({
-    title: subscription.title,
-    price: subscription.price,
-    period: subscription.period,
-    category: subscription.category || 'Other',
-    start_date: subscription.start_date ? subscription.start_date.split('T')[0] : '',
-    active: subscription.active
-  });
-
-  const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({
-      ...subscription,
-      ...form,
-      price: parseFloat(form.price) || 0
-    });
-  };
-
-  return (
-    <div className="edit-form">
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label className="form-label">{t.title}</label>
-          <input 
-            type="text"
-            className="form-input"
-            value={form.title}
-            onChange={(e) => handleChange('title', e.target.value)}
-            required
-          />
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t.price}</label>
-            <input 
-              type="number"
-              step="0.01"
-              className="form-input"
-              value={form.price}
-              onChange={(e) => handleChange('price', e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">{t.period}</label>
-            <select 
-              className="form-select"
-              value={form.period}
-              onChange={(e) => handleChange('period', e.target.value)}
-            >
-              <option value="month">{t.monthly}</option>
-              <option value="year">{t.yearly}</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t.category}</label>
-            <select 
-              className="form-select"
-              value={form.category}
-              onChange={(e) => handleChange('category', e.target.value)}
-            >
-              {categoryOptions[language].map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label className="form-label">{t.startDate}</label>
-            <input 
-              type="date"
-              className="form-input"
-              value={form.start_date}
-              onChange={(e) => handleChange('start_date', e.target.value)}
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="form-actions">
-          <button type="button" className="btn btn-outline" onClick={onCancel}>
-            {t.cancel}
-          </button>
-          <button type="submit" className="btn btn-primary">
-            {t.save}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}

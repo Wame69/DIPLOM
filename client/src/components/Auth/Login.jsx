@@ -2,120 +2,117 @@ import React, { useState } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
 export default function Login({ onSuccess, onRegister, onWelcome }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
   const { language } = useLanguage();
 
   const translations = {
     ru: {
       title: 'Вход в Evans',
-      subtitle: 'С возвращением! Войдите в свой аккаунт',
-      emailLabel: 'Email',
+      subtitle: 'Войдите в свой аккаунт для управления подписками',
+      email: 'Email',
       emailPlaceholder: 'your@email.com',
-      passwordLabel: 'Пароль',
+      password: 'Пароль',
       passwordPlaceholder: 'Введите ваш пароль',
-      loginBtn: 'Войти',
-      registerText: 'Нет аккаунта?',
-      registerLink: 'Создать аккаунт',
+      login: 'Войти',
+      noAccount: 'Нет аккаунта?',
+      register: 'Зарегистрироваться',
       back: 'Назад',
-      or: 'или',
-      socialHint: 'Или войдите через социальные сети на главном экране',
-      forgotPassword: 'Забыли пароль?'
+      loginError: 'Ошибка входа',
+      or: 'или'
     },
     en: {
-      title: 'Sign In to Evans',
-      subtitle: 'Welcome back! Sign in to your account',
-      emailLabel: 'Email',
+      title: 'Sign in to Evans',
+      subtitle: 'Sign in to your account to manage subscriptions',
+      email: 'Email',
       emailPlaceholder: 'your@email.com',
-      passwordLabel: 'Password',
+      password: 'Password',
       passwordPlaceholder: 'Enter your password',
-      loginBtn: 'Sign In',
-      registerText: 'Don\'t have an account?',
-      registerLink: 'Create account',
+      login: 'Sign In',
+      noAccount: 'No account?',
+      register: 'Register',
       back: 'Back',
-      or: 'or',
-      socialHint: 'Or sign in with social networks on the main screen',
-      forgotPassword: 'Forgot password?'
+      loginError: 'Login error',
+      or: 'or'
     }
   };
 
   const t = translations[language];
 
-  async function submit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      alert(language === 'ru' ? 'Заполните все поля' : 'Please fill in all fields');
-      return;
-    }
-
-    setIsLoading(true);
+    setLoading(true);
+    
     try {
-      const res = await fetch('/api/login', { 
-        method: 'POST', 
-        headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ email, password })
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
       });
-      const j = await res.json();
-      if (j.token) {
-        localStorage.setItem('ev_token', j.token);
-        onSuccess();
-      } else {
-        alert(j.error || (language === 'ru' ? 'Ошибка входа' : 'Login error'));
-      }
-    } catch (e) { 
-      console.error(e); 
-      alert(language === 'ru' ? 'Ошибка соединения' : 'Connection error'); 
+      
+      if (!res.ok) throw new Error('Login failed');
+      
+      const data = await res.json();
+      localStorage.setItem('ev_token', data.token);
+      onSuccess();
+    } catch (error) {
+      console.error('Login error:', error);
+      alert(t.loginError);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
+      {/* Декоративные элементы фона в стиле Evans */}
+      <div className="background-elements">
+        <div className="bg-shape shape-1"></div>
+        <div className="bg-shape shape-2"></div>
+        <div className="bg-shape shape-3"></div>
+        <div className="bg-pattern"></div>
+      </div>
+
+      {/* Основная карточка */}
       <div className="auth-card">
-        <div className="auth-header">
+        <div className="card-header">
           <button className="back-button" onClick={onWelcome}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
+            <span className="back-text">{t.back}</span>
           </button>
-          <div className="auth-logo">
-            <span className="logo-icon">💰</span>
-            <span className="logo-text">Evans</span>
-          </div>
-          <div style={{width: '40px'}}></div>
+          <div className="header-spacer"></div>
         </div>
 
-        <div className="auth-content">
-          <h1 className="auth-title">{t.title}</h1>
-          <p className="auth-subtitle">{t.subtitle}</p>
+        <div className="card-content">
+          <div className="content-header">
+            <h1 className="title">{t.title}</h1>
+            <p className="subtitle">{t.subtitle}</p>
+          </div>
 
-          <form onSubmit={submit} className="auth-form">
-            <div className="form-group">
-              <label className="form-label">{t.emailLabel}</label>
+          <form onSubmit={handleSubmit} className="auth-form">
+            {/* Поле email */}
+            <div className="input-group">
+              <label className="input-label">{t.email}</label>
               <input 
                 type="email"
-                className="form-input"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                className="text-input"
+                value={form.email}
+                onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
                 placeholder={t.emailPlaceholder}
                 required
               />
             </div>
 
-            <div className="form-group">
-              <div className="password-header">
-                <label className="form-label">{t.passwordLabel}</label>
-                <button type="button" className="forgot-password">
-                  {t.forgotPassword}
-                </button>
-              </div>
+            {/* Поле пароля */}
+            <div className="input-group">
+              <label className="input-label">{t.password}</label>
               <input 
                 type="password"
-                className="form-input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
+                className="text-input"
+                value={form.password}
+                onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
                 placeholder={t.passwordPlaceholder}
                 required
               />
@@ -123,32 +120,28 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
 
             <button 
               type="submit" 
-              className="btn-primary large full-width"
-              disabled={isLoading}
+              className="submit-button"
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
-                  <div className="spinner"></div>
+                  <div className="loading-spinner"></div>
                   {language === 'ru' ? 'Вход...' : 'Signing in...'}
                 </>
               ) : (
-                t.loginBtn
+                t.login
               )}
             </button>
           </form>
 
-          <div className="auth-divider">
-            <span>{t.or}</span>
-          </div>
-
-          <div className="social-hint">
-            {t.socialHint}
+          <div className="divider">
+            <span className="divider-text">{t.or}</span>
           </div>
 
           <div className="auth-footer">
-            <span className="auth-footer-text">{t.registerText}</span>
-            <button className="auth-link" onClick={onRegister}>
-              {t.registerLink}
+            <span className="footer-text">{t.noAccount}</span>
+            <button className="footer-link" onClick={onRegister}>
+              {t.register}
             </button>
           </div>
         </div>
@@ -160,20 +153,84 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #FAF0E6 0%, #FFF8DC 50%, #F5F5DC 100%);
           padding: 20px;
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          box-sizing: border-box;
         }
 
-        .auth-card {
-          background: white;
-          border-radius: 20px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        .background-elements {
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100%;
-          max-width: 440px;
+          height: 100%;
+          pointer-events: none;
           overflow: hidden;
         }
 
-        .auth-header {
+        .bg-shape {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(160, 82, 45, 0.03);
+          border: 1px solid rgba(160, 82, 45, 0.1);
+        }
+
+        .shape-1 {
+          width: 250px;
+          height: 250px;
+          top: 10%;
+          right: 5%;
+          background: rgba(139, 69, 19, 0.05);
+        }
+
+        .shape-2 {
+          width: 200px;
+          height: 200px;
+          bottom: 15%;
+          left: 5%;
+          background: rgba(210, 180, 140, 0.08);
+        }
+
+        .shape-3 {
+          width: 150px;
+          height: 150px;
+          top: 60%;
+          right: 15%;
+          background: rgba(139, 115, 85, 0.06);
+        }
+
+        .bg-pattern {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: 
+            radial-gradient(circle at 20% 20%, rgba(160, 82, 45, 0.03) 2px, transparent 0),
+            radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.02) 1px, transparent 0);
+          background-size: 60px 60px, 40px 40px;
+          background-position: 0 0, 20px 20px;
+        }
+
+        .auth-card {
+          background: rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          box-shadow: 
+            0 20px 40px rgba(139, 69, 19, 0.1),
+            0 8px 24px rgba(139, 69, 19, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8),
+            0 0 0 1px rgba(255, 255, 255, 0.6);
+          width: 100%;
+          max-width: 440px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .card-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -181,55 +238,77 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         }
 
         .back-button {
-          background: #f8fafc;
-          border: none;
-          border-radius: 10px;
-          width: 40px;
-          height: 40px;
           display: flex;
           align-items: center;
-          justify-content: center;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(210, 180, 140, 0.4);
+          border-radius: 12px;
+          padding: 8px 12px;
           cursor: pointer;
-          transition: all 0.2s;
-          color: #64748b;
+          transition: all 0.3s ease;
+          color: #8B7355;
+          backdrop-filter: blur(10px);
+          font-size: 14px;
+          font-weight: 500;
         }
 
         .back-button:hover {
-          background: #e2e8f0;
-          color: #334155;
+          background: #A0522D;
+          color: white;
+          border-color: #A0522D;
+          transform: translateX(-2px);
         }
 
-        .auth-logo {
+        .back-text {
+          display: none;
+        }
+
+        .logo-section {
           display: flex;
           align-items: center;
           gap: 8px;
           font-weight: 700;
           font-size: 20px;
-          color: #007bff;
+          color: #A0522D;
         }
 
         .logo-icon {
-          font-size: 20px;
+          font-size: 24px;
+          background: linear-gradient(135deg, #A0522D, #8B4513);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
-        .auth-content {
+        .header-spacer {
+          width: 40px;
+        }
+
+        .card-content {
           padding: 32px;
         }
 
-        .auth-title {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1a1a1a;
-          margin: 0 0 8px 0;
+        .content-header {
           text-align: center;
+          margin-bottom: 32px;
         }
 
-        .auth-subtitle {
+        .title {
+          font-size: 32px;
+          font-weight: 700;
+          background: linear-gradient(135deg, #8B4513, #A0522D);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          margin: 0 0 8px 0;
+          line-height: 1.2;
+        }
+
+        .subtitle {
           font-size: 16px;
-          color: #64748b;
-          text-align: center;
-          margin: 0 0 32px 0;
+          color: #8B7355;
+          margin: 0;
           line-height: 1.5;
+          opacity: 0.9;
         }
 
         .auth-form {
@@ -238,98 +317,83 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           gap: 20px;
         }
 
-        .form-group {
+        .input-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 6px;
         }
 
-        .password-header {
+        .input-label {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-        }
-
-        .form-label {
+          gap: 8px;
           font-size: 14px;
           font-weight: 600;
-          color: #374151;
+          color: #8B4513;
         }
 
-        .forgot-password {
-          background: none;
-          border: none;
-          color: #007bff;
-          font-size: 12px;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 4px;
-          transition: all 0.2s;
-        }
-
-        .forgot-password:hover {
-          background: #f0f9ff;
-        }
-
-        .form-input {
-          padding: 14px 16px;
-          border: 2px solid #e5e7eb;
-          border-radius: 10px;
+        .text-input {
+          padding: 16px;
+          border: 2px solid rgba(210, 180, 140, 0.4);
+          border-radius: 12px;
           font-size: 16px;
-          transition: all 0.2s;
-          background: white;
+          transition: all 0.3s ease;
+          background: rgba(255, 255, 255, 0.9);
+          color: #8B4513;
+          backdrop-filter: blur(10px);
         }
 
-        .form-input:focus {
+        .text-input:focus {
           outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+          border-color: #A0522D;
+          background: rgba(255, 255, 255, 0.95);
+          box-shadow: 0 0 0 4px rgba(160, 82, 45, 0.1);
+          transform: translateY(-1px);
         }
 
-        .form-input::placeholder {
-          color: #9ca3af;
+        .text-input::placeholder {
+          color: #A0522D;
+          opacity: 0.5;
         }
 
-        .btn-primary {
-          background: #007bff;
+        .submit-button {
+          background: linear-gradient(135deg, #A0522D, #8B4513);
           color: white;
           border: none;
-          border-radius: 10px;
-          padding: 16px 24px;
+          border-radius: 12px;
+          padding: 18px 24px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
+          margin-top: 8px;
+          backdrop-filter: blur(10px);
         }
 
-        .btn-primary:hover:not(:disabled) {
-          background: #0056b3;
-          transform: translateY(-1px);
+        .submit-button:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 
+            0 8px 25px rgba(160, 82, 45, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.2);
         }
 
-        .btn-primary:disabled {
+        .submit-button:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .submit-button:disabled {
           opacity: 0.7;
           cursor: not-allowed;
           transform: none;
         }
 
-        .btn-primary.large {
-          padding: 16px 24px;
-          font-size: 16px;
-        }
-
-        .btn-primary.full-width {
-          width: 100%;
-        }
-
-        .spinner {
-          width: 16px;
-          height: 16px;
+        .loading-spinner {
+          width: 18px;
+          height: 18px;
           border: 2px solid transparent;
           border-top: 2px solid white;
           border-radius: 50%;
@@ -341,33 +405,25 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           100% { transform: rotate(360deg); }
         }
 
-        .auth-divider {
+        .divider {
           display: flex;
           align-items: center;
-          margin: 24px 0;
-          color: #6b7280;
+          margin: 28px 0;
+          color: #8B7355;
           font-size: 14px;
         }
 
-        .auth-divider::before,
-        .auth-divider::after {
+        .divider::before,
+        .divider::after {
           content: '';
           flex: 1;
           height: 1px;
-          background: #e5e7eb;
+          background: linear-gradient(90deg, transparent, rgba(210, 180, 140, 0.6), transparent);
         }
 
-        .auth-divider span {
+        .divider-text {
           padding: 0 16px;
-        }
-
-        .social-hint {
-          text-align: center;
-          font-size: 14px;
-          color: #6b7280;
-          margin-bottom: 24px;
-          line-height: 1.5;
-          padding: 0 16px;
+          opacity: 0.8;
         }
 
         .auth-footer {
@@ -378,23 +434,38 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           font-size: 14px;
         }
 
-        .auth-footer-text {
-          color: #6b7280;
+        .footer-text {
+          color: #8B7355;
+          opacity: 0.9;
         }
 
-        .auth-link {
+        .footer-link {
           background: none;
           border: none;
-          color: #007bff;
+          color: #A0522D;
           font-weight: 600;
           cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 4px;
-          transition: all 0.2s;
+          padding: 6px 12px;
+          border-radius: 6px;
+          transition: all 0.3s ease;
+          text-decoration: underline;
+          text-underline-offset: 2px;
         }
 
-        .auth-link:hover {
-          background: #f0f9ff;
+        .footer-link:hover {
+          background: rgba(160, 82, 45, 0.1);
+          color: #8B4513;
+          transform: translateY(-1px);
+        }
+
+        @media (min-width: 768px) {
+          .back-text {
+            display: block;
+          }
+          
+          .back-button {
+            padding: 8px 16px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -404,29 +475,40 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           }
 
           .auth-card {
-            border-radius: 16px;
+            border-radius: 20px;
           }
 
-          .auth-content {
+          .card-content {
             padding: 24px;
           }
 
-          .auth-title {
-            font-size: 24px;
+          .title {
+            font-size: 28px;
           }
 
-          .auth-header {
+          .card-header {
             padding: 20px 20px 0;
           }
 
-          .password-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
+          .shape-1 {
+            width: 180px;
+            height: 180px;
+            top: 5%;
+            right: -30px;
           }
 
-          .forgot-password {
-            align-self: flex-end;
+          .shape-2 {
+            width: 150px;
+            height: 150px;
+            bottom: 10%;
+            left: -20px;
+          }
+
+          .shape-3 {
+            width: 120px;
+            height: 120px;
+            top: 70%;
+            right: 10%;
           }
         }
       `}</style>
