@@ -65,7 +65,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
 
   return (
     <div className="auth-container">
-      {/* Декоративные элементы фона в стиле Evans */}
       <div className="background-elements">
         <div className="bg-shape shape-1"></div>
         <div className="bg-shape shape-2"></div>
@@ -73,7 +72,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         <div className="bg-pattern"></div>
       </div>
 
-      {/* Основная карточка */}
       <div className="auth-card">
         <div className="card-header">
           <button className="back-button" onClick={onWelcome}>
@@ -92,7 +90,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            {/* Поле email */}
             <div className="input-group">
               <label className="input-label">{t.email}</label>
               <input 
@@ -105,7 +102,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
               />
             </div>
 
-            {/* Поле пароля */}
             <div className="input-group">
               <label className="input-label">{t.password}</label>
               <input 
@@ -153,7 +149,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #FAF0E6 0%, #FFF8DC 50%, #F5F5DC 100%);
+          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
           padding: 20px;
           position: relative;
           overflow: hidden;
@@ -174,8 +170,8 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         .bg-shape {
           position: absolute;
           border-radius: 50%;
-          background: rgba(160, 82, 45, 0.03);
-          border: 1px solid rgba(160, 82, 45, 0.1);
+          background: linear-gradient(135deg, rgba(26, 54, 93, 0.03), rgba(45, 55, 72, 0.02));
+          border: 1px solid rgba(226, 232, 240, 0.3);
         }
 
         .shape-1 {
@@ -183,7 +179,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           height: 250px;
           top: 10%;
           right: 5%;
-          background: rgba(139, 69, 19, 0.05);
         }
 
         .shape-2 {
@@ -191,7 +186,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           height: 200px;
           bottom: 15%;
           left: 5%;
-          background: rgba(210, 180, 140, 0.08);
         }
 
         .shape-3 {
@@ -199,7 +193,6 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           height: 150px;
           top: 60%;
           right: 15%;
-          background: rgba(139, 115, 85, 0.06);
         }
 
         .bg-pattern {
@@ -208,20 +201,18 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           left: 0;
           width: 100%;
           height: 100%;
-          background-image: 
-            radial-gradient(circle at 20% 20%, rgba(160, 82, 45, 0.03) 2px, transparent 0),
-            radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.02) 1px, transparent 0);
-          background-size: 60px 60px, 40px 40px;
-          background-position: 0 0, 20px 20px;
+          background: 
+            radial-gradient(circle at 20% 20%, rgba(26, 54, 93, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(26, 54, 93, 0.01) 0%, transparent 50%);
         }
 
         .auth-card {
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(20px);
           border-radius: 24px;
           box-shadow: 
-            0 20px 40px rgba(139, 69, 19, 0.1),
-            0 8px 24px rgba(139, 69, 19, 0.05),
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 8px 24px rgba(0, 0, 0, 0.05),
             inset 0 1px 0 rgba(255, 255, 255, 0.8),
             0 0 0 1px rgba(255, 255, 255, 0.6);
           width: 100%;
@@ -242,42 +233,26 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           align-items: center;
           gap: 8px;
           background: rgba(255, 255, 255, 0.9);
-          border: 1px solid rgba(210, 180, 140, 0.4);
+          border: 1px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           padding: 8px 12px;
           cursor: pointer;
           transition: all 0.3s ease;
-          color: #8B7355;
+          color: #4a5568;
           backdrop-filter: blur(10px);
           font-size: 14px;
           font-weight: 500;
         }
 
         .back-button:hover {
-          background: #A0522D;
+          background: #1a365d;
           color: white;
-          border-color: #A0522D;
+          border-color: #1a365d;
           transform: translateX(-2px);
         }
 
         .back-text {
           display: none;
-        }
-
-        .logo-section {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 700;
-          font-size: 20px;
-          color: #A0522D;
-        }
-
-        .logo-icon {
-          font-size: 24px;
-          background: linear-gradient(135deg, #A0522D, #8B4513);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
         }
 
         .header-spacer {
@@ -296,7 +271,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         .title {
           font-size: 32px;
           font-weight: 700;
-          background: linear-gradient(135deg, #8B4513, #A0522D);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           margin: 0 0 8px 0;
@@ -305,7 +280,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
 
         .subtitle {
           font-size: 16px;
-          color: #8B7355;
+          color: #4a5568;
           margin: 0;
           line-height: 1.5;
           opacity: 0.9;
@@ -329,35 +304,35 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           gap: 8px;
           font-size: 14px;
           font-weight: 600;
-          color: #8B4513;
+          color: #1a365d;
         }
 
         .text-input {
           padding: 16px;
-          border: 2px solid rgba(210, 180, 140, 0.4);
+          border: 2px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           font-size: 16px;
           transition: all 0.3s ease;
           background: rgba(255, 255, 255, 0.9);
-          color: #8B4513;
+          color: #1a365d;
           backdrop-filter: blur(10px);
         }
 
         .text-input:focus {
           outline: none;
-          border-color: #A0522D;
+          border-color: #1a365d;
           background: rgba(255, 255, 255, 0.95);
-          box-shadow: 0 0 0 4px rgba(160, 82, 45, 0.1);
+          box-shadow: 0 0 0 4px rgba(26, 54, 93, 0.1);
           transform: translateY(-1px);
         }
 
         .text-input::placeholder {
-          color: #A0522D;
+          color: #4a5568;
           opacity: 0.5;
         }
 
         .submit-button {
-          background: linear-gradient(135deg, #A0522D, #8B4513);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           color: white;
           border: none;
           border-radius: 12px;
@@ -377,7 +352,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         .submit-button:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 
-            0 8px 25px rgba(160, 82, 45, 0.3),
+            0 8px 25px rgba(26, 54, 93, 0.3),
             0 0 0 1px rgba(255, 255, 255, 0.2);
         }
 
@@ -409,7 +384,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           display: flex;
           align-items: center;
           margin: 28px 0;
-          color: #8B7355;
+          color: #4a5568;
           font-size: 14px;
         }
 
@@ -418,7 +393,7 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
           content: '';
           flex: 1;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(210, 180, 140, 0.6), transparent);
+          background: linear-gradient(90deg, transparent, rgba(226, 232, 240, 0.8), transparent);
         }
 
         .divider-text {
@@ -435,14 +410,14 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         }
 
         .footer-text {
-          color: #8B7355;
+          color: #4a5568;
           opacity: 0.9;
         }
 
         .footer-link {
           background: none;
           border: none;
-          color: #A0522D;
+          color: #1a365d;
           font-weight: 600;
           cursor: pointer;
           padding: 6px 12px;
@@ -453,8 +428,8 @@ export default function Login({ onSuccess, onRegister, onWelcome }) {
         }
 
         .footer-link:hover {
-          background: rgba(160, 82, 45, 0.1);
-          color: #8B4513;
+          background: rgba(26, 54, 93, 0.1);
+          color: #1a365d;
           transform: translateY(-1px);
         }
 

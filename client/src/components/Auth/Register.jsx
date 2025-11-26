@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext.jsx';
 
 export default function Register({ onSuccess, onLogin, onWelcome }) {
@@ -25,8 +25,11 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
       confirmPasswordLabel: 'Подтверждение пароля',
       confirmPasswordPlaceholder: 'Повторите пароль',
       telegramLabel: 'Telegram Username',
-      telegramPlaceholder: '@username или номер телефона',
-      telegramHint: 'Укажите ваш Telegram для получения уведомлений. Мы автоматически найдем ваш Chat ID',
+      telegramPlaceholder: '@username',
+      telegramHint: 'Укажите ваш Telegram для получения уведомлений',
+      telegramConnect: 'Подключить Telegram',
+      telegramConnecting: 'Подключение...',
+      telegramConnected: 'Telegram подключен!',
       registerBtn: 'Создать аккаунт',
       loginText: 'Уже есть аккаунт?',
       loginLink: 'Войти',
@@ -40,7 +43,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         passwordWeak: 'Пароль слишком слабый',
         passwordsMatch: 'Пароли не совпадают',
         nameTooShort: 'Имя должно содержать минимум 2 символа',
-        telegramInvalid: 'Некорректный формат Telegram'
+        telegramInvalid: 'Некорректный формат Telegram (начинается с @)'
       }
     },
     en: {
@@ -56,8 +59,11 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
       confirmPasswordLabel: 'Confirm Password',
       confirmPasswordPlaceholder: 'Repeat password',
       telegramLabel: 'Telegram Username',
-      telegramPlaceholder: '@username or phone number',
-      telegramHint: 'Provide your Telegram for notifications. We will automatically find your Chat ID',
+      telegramPlaceholder: '@username',
+      telegramHint: 'Provide your Telegram for notifications',
+      telegramConnect: 'Connect Telegram',
+      telegramConnecting: 'Connecting...',
+      telegramConnected: 'Telegram connected!',
       registerBtn: 'Create Account',
       loginText: 'Already have an account?',
       loginLink: 'Sign In',
@@ -71,60 +77,135 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         passwordWeak: 'Password is too weak',
         passwordsMatch: 'Passwords do not match',
         nameTooShort: 'Name must be at least 2 characters',
-        telegramInvalid: 'Invalid Telegram format'
+        telegramInvalid: 'Invalid Telegram format (must start with @)'
       }
     }
   };
 
   const t = translations[language];
+  const [telegramStatus, setTelegramStatus] = useState('disconnected');
 
-  // Валидация email
+  useEffect(() => {
+    const checkPendingTelegramConnection = () => {
+      const pending = localStorage.getItem('pending_telegram_connection');
+      if (pending) {
+        const connectionData = JSON.parse(pending);
+        
+        if (Date.now() - connectionData.timestamp < 10 * 60 * 1000) {
+          if (connectionData.username === telegramUsername) {
+            setTelegramStatus('pending');
+          }
+        } else {
+          localStorage.removeItem('pending_telegram_connection');
+        }
+      }
+    };
+
+    checkPendingTelegramConnection();
+  }, [telegramUsername]);
+
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Валидация пароля
   const validatePassword = (password) => {
     return password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password);
   };
 
-  // Валидация Telegram
   const validateTelegram = (telegram) => {
-    if (!telegram) return true; // Необязательное поле
-    const telegramRegex = /^(@[a-zA-Z0-9_]{5,32}|(\+?\d{10,15}))$/;
+    if (!telegram) return true;
+    const telegramRegex = /^@[a-zA-Z0-9_]{5,32}$/;
     return telegramRegex.test(telegram);
   };
 
-  // Валидация формы
+  const connectTelegram = async () => {
+    if (!telegramUsername || !validateTelegram(telegramUsername)) {
+      setErrors(prev => ({ ...prev, telegramUsername: t.errors.telegramInvalid }));
+      return;
+    }
+
+    setTelegramStatus('connecting');
+
+    try {
+      const token = localStorage.getItem('ev_token');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+
+      const response = await fetch('/api/telegram/generate-link', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          telegramUsername: telegramUsername,
+          email: email,
+          name: name
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.telegramUrl) {
+        localStorage.setItem('pending_telegram_connection', JSON.stringify({
+          username: telegramUsername,
+          email: email,
+          timestamp: Date.now()
+        }));
+
+        window.open(result.telegramUrl, '_blank');
+        
+        setTelegramStatus('pending');
+        
+        setTimeout(() => {
+          alert(
+            language === 'ru'
+              ? 'Telegram открыт. Нажмите кнопку "START" в диалоге с ботом @evans_notifications_bot, затем вернитесь в приложение и завершите регистрацию.'
+              : 'Telegram opened. Click "START" button in the bot chat @evans_notifications_bot, then return to the app and complete registration.'
+          );
+        }, 1000);
+      } else {
+        throw new Error(result.error || 'Failed to generate Telegram link');
+      }
+
+    } catch (error) {
+      console.error('Telegram connection error:', error);
+      setTelegramStatus('disconnected');
+      setErrors(prev => ({ 
+        ...prev, 
+        telegramUsername: language === 'ru' 
+          ? 'Ошибка подключения. Попробуйте позже'
+          : 'Connection error. Please try again later'
+      }));
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
-    // Валидация email
     if (!email) {
       newErrors.email = t.errors.emailRequired;
     } else if (!validateEmail(email)) {
       newErrors.email = t.errors.emailInvalid;
     }
 
-    // Валидация имени
     if (name && name.length < 2) {
       newErrors.name = t.errors.nameTooShort;
     }
 
-    // Валидация пароля
     if (!password) {
       newErrors.password = t.errors.passwordRequired;
     } else if (!validatePassword(password)) {
       newErrors.password = t.errors.passwordWeak;
     }
 
-    // Валидация подтверждения пароля
     if (password !== confirmPassword) {
       newErrors.confirmPassword = t.errors.passwordsMatch;
     }
 
-    // Валидация Telegram
     if (telegramUsername && !validateTelegram(telegramUsername)) {
       newErrors.telegramUsername = t.errors.telegramInvalid;
     }
@@ -142,6 +223,16 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
 
     setIsLoading(true);
     try {
+      let finalTelegramUsername = telegramUsername;
+      
+      const pendingConnection = localStorage.getItem('pending_telegram_connection');
+      if (pendingConnection) {
+        const connectionData = JSON.parse(pendingConnection);
+        if (connectionData.username === telegramUsername) {
+          finalTelegramUsername = telegramUsername;
+        }
+      }
+
       const res = await fetch('/api/register', { 
         method: 'POST', 
         headers: {'Content-Type':'application/json'}, 
@@ -149,7 +240,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           email, 
           password, 
           name: name || undefined,
-          telegram_username: telegramUsername || undefined
+          telegram_username: finalTelegramUsername || undefined
         })
       });
       
@@ -157,21 +248,14 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
       
       if (j.token) {
         localStorage.setItem('ev_token', j.token);
+        localStorage.removeItem('pending_telegram_connection');
         
-        // Если указан Telegram, отправляем приветственное сообщение
-        if (telegramUsername) {
-          try {
-            await fetch('/api/send-telegram-welcome', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + j.token
-              },
-              body: JSON.stringify({ telegram_username: telegramUsername })
-            });
-          } catch (telegramError) {
-            console.log('Telegram welcome message not sent:', telegramError);
-          }
+        if (finalTelegramUsername) {
+          alert(
+            language === 'ru'
+              ? `Аккаунт создан! Теперь откройте Telegram и нажмите START в диалоге с @evans_notifications_bot чтобы подключить уведомления.`
+              : `Account created! Now open Telegram and press START in the chat with @evans_notifications_bot to connect notifications.`
+          );
         }
         
         onSuccess();
@@ -186,14 +270,12 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
     }
   }
 
-  // Очистка ошибки при изменении поля
   const clearError = (field) => {
     setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   return (
     <div className="auth-container">
-      {/* Декоративные элементы фона в стиле Evans */}
       <div className="background-elements">
         <div className="bg-shape shape-1"></div>
         <div className="bg-shape shape-2"></div>
@@ -201,7 +283,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         <div className="bg-pattern"></div>
       </div>
 
-      {/* Основная карточка */}
       <div className="auth-card">
         <div className="card-header">
           <button className="back-button" onClick={onWelcome}>
@@ -220,7 +301,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           </div>
 
           <form onSubmit={submit} className="auth-form">
-            {/* Поле имени */}
             <div className="input-group">
               <label className="input-label">
                 {t.nameLabel}
@@ -239,7 +319,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
               {errors.name && <span className="error-text">{errors.name}</span>}
             </div>
 
-            {/* Поле email */}
             <div className="input-group">
               <label className="input-label">{t.emailLabel}</label>
               <input 
@@ -256,7 +335,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
               {errors.email && <span className="error-text">{errors.email}</span>}
             </div>
 
-            {/* Поле пароля */}
             <div className="input-group">
               <label className="input-label">{t.passwordLabel}</label>
               <input 
@@ -274,7 +352,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
               {errors.password && <span className="error-text">{errors.password}</span>}
             </div>
 
-            {/* Подтверждение пароля */}
             <div className="input-group">
               <label className="input-label">{t.confirmPasswordLabel}</label>
               <input 
@@ -291,28 +368,77 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
               {errors.confirmPassword && <span className="error-text">{errors.confirmPassword}</span>}
             </div>
 
-            {/* Поле Telegram */}
             <div className="input-group">
               <label className="input-label">
                 {t.telegramLabel}
                 <span className="optional-tag">{t.optional}</span>
               </label>
-              <input 
-                type="text"
-                className={`text-input ${errors.telegramUsername ? 'input-error' : ''}`}
-                value={telegramUsername}
-                onChange={e => {
-                  setTelegramUsername(e.target.value);
-                  clearError('telegramUsername');
-                }}
-                placeholder={t.telegramPlaceholder}
-              />
-              <div className="telegram-note">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#0088cc">
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.158l-1.99 9.359c-.145.658-.537.818-1.084.509l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.022c.241-.213-.054-.334-.373-.12l-6.869 4.326-2.96-.924c-.64-.203-.652-.64.135-.945l11.566-4.458c.534-.196 1.006.128.832.945z"/>
-                </svg>
-                {t.telegramHint}
+              
+              <div className="telegram-input-container">
+                <input 
+                  type="text"
+                  className={`text-input ${errors.telegramUsername ? 'input-error' : ''}`}
+                  value={telegramUsername}
+                  onChange={e => {
+                    setTelegramUsername(e.target.value);
+                    clearError('telegramUsername');
+                    setTelegramStatus('disconnected');
+                  }}
+                  placeholder={t.telegramPlaceholder}
+                />
+                <button
+                  type="button"
+                  className={`telegram-connect-btn ${
+                    telegramStatus === 'connected' ? 'connected' : 
+                    telegramStatus === 'connecting' ? 'connecting' : 
+                    telegramStatus === 'pending' ? 'pending' : ''
+                  }`}
+                  onClick={connectTelegram}
+                  disabled={!telegramUsername || telegramStatus === 'connecting'}
+                >
+                  {telegramStatus === 'connecting' ? (
+                    <>
+                      <div className="loading-spinner small"></div>
+                      {t.telegramConnecting}
+                    </>
+                  ) : telegramStatus === 'connected' ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      </svg>
+                      {t.telegramConnected}
+                    </>
+                  ) : telegramStatus === 'pending' ? (
+                    <>
+                      <div className="pending-indicator"></div>
+                      {language === 'ru' ? 'Ожидание...' : 'Pending...'}
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.158l-1.99 9.359c-.145.658-.537.818-1.084.509l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.022c.241-.213-.054-.334-.373-.12l-6.869 4.326-2.96-.924c-.64-.203-.652-.64.135-.945l11.566-4.458c.534-.196 1.006.128.832.945z"/>
+                      </svg>
+                      {t.telegramConnect}
+                    </>
+                  )}
+                </button>
               </div>
+              
+              <div className="telegram-note">
+                <div className="telegram-steps">
+                  <h4>{language === 'ru' ? 'Как подключить Telegram:' : 'How to connect Telegram:'}</h4>
+                  <ol>
+                    <li>{language === 'ru' ? 'Нажмите кнопку "Подключить Telegram"' : 'Click "Connect Telegram" button'}</li>
+                    <li>{language === 'ru' ? 'Откроется Telegram с ботом @evans_notifications_bot' : 'Telegram will open with @evans_notifications_bot'}</li>
+                    <li>{language === 'ru' ? 'Нажмите START в диалоге с ботом' : 'Click START in the bot chat'}</li>
+                    <li>{language === 'ru' ? 'Вернитесь и завершите регистрацию' : 'Return and complete registration'}</li>
+                  </ol>
+                  <div className="telegram-bot-info">
+                    <strong>Бот: @evans_notifications_bot</strong>
+                  </div>
+                </div>
+              </div>
+              
               {errors.telegramUsername && <span className="error-text">{errors.telegramUsername}</span>}
             </div>
 
@@ -351,7 +477,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #FAF0E6 0%, #FFF8DC 50%, #F5F5DC 100%);
+          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
           padding: 20px;
           position: relative;
           overflow: hidden;
@@ -372,8 +498,8 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         .bg-shape {
           position: absolute;
           border-radius: 50%;
-          background: rgba(160, 82, 45, 0.03);
-          border: 1px solid rgba(160, 82, 45, 0.1);
+          background: linear-gradient(135deg, rgba(26, 54, 93, 0.03), rgba(45, 55, 72, 0.02));
+          border: 1px solid rgba(226, 232, 240, 0.3);
         }
 
         .shape-1 {
@@ -381,7 +507,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           height: 250px;
           top: 10%;
           right: 5%;
-          background: rgba(139, 69, 19, 0.05);
         }
 
         .shape-2 {
@@ -389,7 +514,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           height: 200px;
           bottom: 15%;
           left: 5%;
-          background: rgba(210, 180, 140, 0.08);
         }
 
         .shape-3 {
@@ -397,7 +521,6 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           height: 150px;
           top: 60%;
           right: 15%;
-          background: rgba(139, 115, 85, 0.06);
         }
 
         .bg-pattern {
@@ -406,20 +529,18 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           left: 0;
           width: 100%;
           height: 100%;
-          background-image: 
-            radial-gradient(circle at 20% 20%, rgba(160, 82, 45, 0.03) 2px, transparent 0),
-            radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.02) 1px, transparent 0);
-          background-size: 60px 60px, 40px 40px;
-          background-position: 0 0, 20px 20px;
+          background: 
+            radial-gradient(circle at 20% 20%, rgba(26, 54, 93, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(26, 54, 93, 0.01) 0%, transparent 50%);
         }
 
         .auth-card {
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(20px);
           border-radius: 24px;
           box-shadow: 
-            0 20px 40px rgba(139, 69, 19, 0.1),
-            0 8px 24px rgba(139, 69, 19, 0.05),
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 8px 24px rgba(0, 0, 0, 0.05),
             inset 0 1px 0 rgba(255, 255, 255, 0.8),
             0 0 0 1px rgba(255, 255, 255, 0.6);
           width: 100%;
@@ -440,42 +561,26 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           align-items: center;
           gap: 8px;
           background: rgba(255, 255, 255, 0.9);
-          border: 1px solid rgba(210, 180, 140, 0.4);
+          border: 1px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           padding: 8px 12px;
           cursor: pointer;
           transition: all 0.3s ease;
-          color: #8B7355;
+          color: #4a5568;
           backdrop-filter: blur(10px);
           font-size: 14px;
           font-weight: 500;
         }
 
         .back-button:hover {
-          background: #A0522D;
+          background: #1a365d;
           color: white;
-          border-color: #A0522D;
+          border-color: #1a365d;
           transform: translateX(-2px);
         }
 
         .back-text {
           display: none;
-        }
-
-        .logo-section {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 700;
-          font-size: 20px;
-          color: #A0522D;
-        }
-
-        .logo-icon {
-          font-size: 24px;
-          background: linear-gradient(135deg, #A0522D, #8B4513);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
         }
 
         .header-spacer {
@@ -494,7 +599,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         .title {
           font-size: 32px;
           font-weight: 700;
-          background: linear-gradient(135deg, #8B4513, #A0522D);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           margin: 0 0 8px 0;
@@ -503,7 +608,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
 
         .subtitle {
           font-size: 16px;
-          color: #8B7355;
+          color: #4a5568;
           margin: 0;
           line-height: 1.5;
           opacity: 0.9;
@@ -527,40 +632,40 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           gap: 8px;
           font-size: 14px;
           font-weight: 600;
-          color: #8B4513;
+          color: #1a365d;
         }
 
         .optional-tag {
-          background: rgba(160, 82, 45, 0.1);
-          color: #A0522D;
+          background: rgba(26, 54, 93, 0.1);
+          color: #1a365d;
           font-size: 11px;
           font-weight: 500;
           padding: 2px 8px;
           border-radius: 12px;
-          border: 1px solid rgba(160, 82, 45, 0.2);
+          border: 1px solid rgba(26, 54, 93, 0.2);
         }
 
         .text-input {
           padding: 16px;
-          border: 2px solid rgba(210, 180, 140, 0.4);
+          border: 2px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           font-size: 16px;
           transition: all 0.3s ease;
           background: rgba(255, 255, 255, 0.9);
-          color: #8B4513;
+          color: #1a365d;
           backdrop-filter: blur(10px);
         }
 
         .text-input:focus {
           outline: none;
-          border-color: #A0522D;
+          border-color: #1a365d;
           background: rgba(255, 255, 255, 0.95);
-          box-shadow: 0 0 0 4px rgba(160, 82, 45, 0.1);
+          box-shadow: 0 0 0 4px rgba(26, 54, 93, 0.1);
           transform: translateY(-1px);
         }
 
         .text-input::placeholder {
-          color: #A0522D;
+          color: #4a5568;
           opacity: 0.5;
         }
 
@@ -583,25 +688,129 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
 
         .input-hint {
           font-size: 12px;
-          color: #8B7355;
+          color: #4a5568;
           opacity: 0.7;
         }
 
-        .telegram-note {
+        .telegram-input-container {
+          display: flex;
+          gap: 8px;
+          align-items: stretch;
+        }
+
+        .telegram-input-container .text-input {
+          flex: 1;
+        }
+
+        .telegram-connect-btn {
+          background: linear-gradient(135deg, #0088cc, #006699);
+          color: white;
+          border: none;
+          border-radius: 12px;
+          padding: 0 16px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
+          white-space: nowrap;
+          min-width: 160px;
+          justify-content: center;
+        }
+
+        .telegram-connect-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+        }
+
+        .telegram-connect-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .telegram-connect-btn.connecting {
+          background: linear-gradient(135deg, #4a5568, #2d3748);
+        }
+
+        .telegram-connect-btn.connected {
+          background: linear-gradient(135deg, #38a169, #2f855a);
+        }
+
+        .telegram-connect-btn.pending {
+          background: linear-gradient(135deg, #d69e2e, #b7791f);
+        }
+
+        .telegram-note {
           background: rgba(0, 136, 204, 0.05);
           padding: 12px;
           border-radius: 8px;
           border: 1px solid rgba(0, 136, 204, 0.2);
-          color: #2c3e50;
-          font-size: 12px;
           margin-top: 4px;
         }
 
+        .telegram-steps h4 {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          color: #1a365d;
+          font-weight: 600;
+        }
+
+        .telegram-steps ol {
+          margin: 0;
+          padding-left: 16px;
+          font-size: 12px;
+          color: #4a5568;
+          line-height: 1.4;
+        }
+
+        .telegram-steps li {
+          margin-bottom: 4px;
+        }
+
+        .telegram-bot-info {
+          margin-top: 8px;
+          padding: 8px;
+          background: rgba(0, 136, 204, 0.1);
+          border-radius: 6px;
+          border: 1px solid rgba(0, 136, 204, 0.2);
+          font-size: 12px;
+          text-align: center;
+        }
+
+        .loading-spinner {
+          width: 18px;
+          height: 18px;
+          border: 2px solid transparent;
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .loading-spinner.small {
+          width: 14px;
+          height: 14px;
+          border-width: 1.5px;
+        }
+
+        .pending-indicator {
+          width: 14px;
+          height: 14px;
+          border: 2px solid white;
+          border-top: 2px solid transparent;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         .submit-button {
-          background: linear-gradient(135deg, #A0522D, #8B4513);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           color: white;
           border: none;
           border-radius: 12px;
@@ -621,7 +830,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         .submit-button:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 
-            0 8px 25px rgba(160, 82, 45, 0.3),
+            0 8px 25px rgba(26, 54, 93, 0.3),
             0 0 0 1px rgba(255, 255, 255, 0.2);
         }
 
@@ -635,25 +844,11 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           transform: none;
         }
 
-        .loading-spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid transparent;
-          border-top: 2px solid white;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
         .divider {
           display: flex;
           align-items: center;
           margin: 28px 0;
-          color: #8B7355;
+          color: #4a5568;
           font-size: 14px;
         }
 
@@ -662,7 +857,7 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
           content: '';
           flex: 1;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(210, 180, 140, 0.6), transparent);
+          background: linear-gradient(90deg, transparent, rgba(226, 232, 240, 0.8), transparent);
         }
 
         .divider-text {
@@ -679,14 +874,14 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         }
 
         .footer-text {
-          color: #8B7355;
+          color: #4a5568;
           opacity: 0.9;
         }
 
         .footer-link {
           background: none;
           border: none;
-          color: #A0522D;
+          color: #1a365d;
           font-weight: 600;
           cursor: pointer;
           padding: 6px 12px;
@@ -697,8 +892,8 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
         }
 
         .footer-link:hover {
-          background: rgba(160, 82, 45, 0.1);
-          color: #8B4513;
+          background: rgba(26, 54, 93, 0.1);
+          color: #1a365d;
           transform: translateY(-1px);
         }
 
@@ -732,6 +927,15 @@ export default function Register({ onSuccess, onLogin, onWelcome }) {
 
           .card-header {
             padding: 20px 20px 0;
+          }
+
+          .telegram-input-container {
+            flex-direction: column;
+          }
+
+          .telegram-connect-btn {
+            min-width: auto;
+            padding: 12px 16px;
           }
 
           .shape-1 {

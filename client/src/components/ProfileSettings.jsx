@@ -1,91 +1,195 @@
 // components/ProfileSettings.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext.jsx';
 
-export default function ProfileSettings({ onClose }) {
-  const [user, setUser] = useState({
-    name: 'Иван Иванов',
-    email: 'ivan@example.com',
-    phone: '+7 (999) 123-45-67',
-    avatar: null
+export default function ProfileSettings({ onClose, user, onSave, onAvatarUpload }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    bio: ''
   });
 
-  const handleSave = () => {
-    // Сохранение данных профиля
-    onClose();
+  const [avatar, setAvatar] = useState(null);
+  const { language } = useLanguage();
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        bio: user.bio || ''
+      });
+      setAvatar(user.avatar || null);
+    }
+  }, [user]);
+
+  const translations = {
+    ru: {
+      profileSettings: 'Настройки профиля',
+      name: 'Имя',
+      enterName: 'Введите ваше имя',
+      email: 'Email',
+      enterEmail: 'Введите ваш email',
+      phone: 'Телефон',
+      enterPhone: 'Введите ваш телефон',
+      bio: 'О себе',
+      enterBio: 'Расскажите о себе...',
+      security: 'Безопасность',
+      changePassword: 'Сменить пароль',
+      twoFactorAuth: 'Двухфакторная аутентификация',
+      cancel: 'Отмена',
+      saveChanges: 'Сохранить изменения',
+      changePhoto: 'Изменить фото'
+    },
+    en: {
+      profileSettings: 'Profile Settings',
+      name: 'Name',
+      enterName: 'Enter your name',
+      email: 'Email',
+      enterEmail: 'Enter your email',
+      phone: 'Phone',
+      enterPhone: 'Enter your phone',
+      bio: 'About',
+      enterBio: 'Tell about yourself...',
+      security: 'Security',
+      changePassword: 'Change Password',
+      twoFactorAuth: 'Two-Factor Authentication',
+      cancel: 'Cancel',
+      saveChanges: 'Save Changes',
+      changePhoto: 'Change Photo'
+    }
+  };
+
+  const t = translations[language];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      ...form,
+      avatar: avatar
+    });
+  };
+
+  const handleAvatarChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      onAvatarUpload(event);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatar(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleChangePassword = () => {
+    alert('Функция смены пароля в разработке');
+  };
+
+  const handleTwoFactorAuth = () => {
+    alert('Функция двухфакторной аутентификации в разработке');
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content large" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Настройки профиля</h2>
+          <h2>{t.profileSettings}</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         
-        <div className="profile-content">
-          <div className="avatar-section">
-            <div className="avatar-upload">
-              <div className="avatar-preview">
-                <div className="avatar-circle">
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="Avatar" />
-                  ) : (
-                    <span>{user.name[0]}</span>
-                  )}
+        <form onSubmit={handleSubmit}>
+          <div className="profile-content">
+            <div className="avatar-section">
+              <div className="avatar-upload">
+                <div className="avatar-preview">
+                  <div className="avatar-circle">
+                    {avatar ? (
+                      <img src={avatar} alt="Avatar" />
+                    ) : (
+                      <span>{form.name[0]?.toUpperCase() || 'U'}</span>
+                    )}
+                  </div>
+                  <div className="avatar-overlay">
+                    <span>📷</span>
+                    <span className="upload-text">{t.changePhoto}</span>
+                  </div>
                 </div>
-                <div className="avatar-overlay">
-                  <span>📷</span>
-                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="avatar-input" 
+                  onChange={handleAvatarChange}
+                />
               </div>
-              <input type="file" accept="image/*" className="avatar-input" />
+            </div>
+            
+            <div className="form-section">
+              <div className="form-group">
+                <label>{t.name}</label>
+                <input 
+                  type="text" 
+                  value={form.name}
+                  onChange={(e) => setForm({...form, name: e.target.value})}
+                  placeholder={t.enterName}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>{t.email}</label>
+                <input 
+                  type="email" 
+                  value={form.email}
+                  onChange={(e) => setForm({...form, email: e.target.value})}
+                  placeholder={t.enterEmail}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>{t.phone}</label>
+                <input 
+                  type="tel" 
+                  value={form.phone}
+                  onChange={(e) => setForm({...form, phone: e.target.value})}
+                  placeholder={t.enterPhone}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>{t.bio}</label>
+                <textarea 
+                  value={form.bio}
+                  onChange={(e) => setForm({...form, bio: e.target.value})}
+                  placeholder={t.enterBio}
+                  rows="4"
+                />
+              </div>
+
+              <div className="security-section">
+                <h3>{t.security}</h3>
+                <button type="button" className="btn-outline" onClick={handleChangePassword}>
+                  {t.changePassword}
+                </button>
+                <button type="button" className="btn-outline" onClick={handleTwoFactorAuth}>
+                  {t.twoFactorAuth}
+                </button>
+              </div>
             </div>
           </div>
           
-          <div className="form-section">
-            <div className="form-group">
-              <label>Имя</label>
-              <input 
-                type="text" 
-                value={user.name}
-                onChange={(e) => setUser({...user, name: e.target.value})}
-                placeholder="Введите ваше имя"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Email</label>
-              <input 
-                type="email" 
-                value={user.email}
-                onChange={(e) => setUser({...user, email: e.target.value})}
-                placeholder="Введите ваш email"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Телефон</label>
-              <input 
-                type="tel" 
-                value={user.phone}
-                onChange={(e) => setUser({...user, phone: e.target.value})}
-                placeholder="Введите ваш телефон"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>О себе</label>
-              <textarea 
-                placeholder="Расскажите о себе..."
-                rows="4"
-              />
-            </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              {t.cancel}
+            </button>
+            <button type="submit" className="btn-primary">
+              {t.saveChanges}
+            </button>
           </div>
-        </div>
-        
-        <div className="modal-actions">
-          <button className="btn-secondary" onClick={onClose}>Отмена</button>
-          <button className="btn-primary" onClick={handleSave}>Сохранить изменения</button>
-        </div>
+        </form>
       </div>
 
       <style jsx>{`
@@ -106,13 +210,13 @@ export default function ProfileSettings({ onClose }) {
         .modal-content.large {
           width: 600px;
           max-width: 90vw;
+          max-height: 90vh;
         }
         
         .modal-content {
           background: white;
           border-radius: 20px;
           padding: 0;
-          max-height: 80vh;
           display: flex;
           flex-direction: column;
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -128,7 +232,8 @@ export default function ProfileSettings({ onClose }) {
         
         .modal-header h2 {
           margin: 0;
-          color: #333;
+          color: #1a365d;
+          font-size: 24px;
         }
         
         .close-btn {
@@ -165,17 +270,19 @@ export default function ProfileSettings({ onClose }) {
         .avatar-upload {
           position: relative;
           cursor: pointer;
+          text-align: center;
         }
         
         .avatar-preview {
           position: relative;
+          display: inline-block;
         }
         
         .avatar-circle {
           width: 120px;
           height: 120px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -197,17 +304,24 @@ export default function ProfileSettings({ onClose }) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.5);
+          background: rgba(0,0,0,0.7);
           border-radius: 50%;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
           opacity: 0;
           transition: all 0.3s ease;
+          color: white;
         }
         
         .avatar-upload:hover .avatar-overlay {
           opacity: 1;
+        }
+        
+        .upload-text {
+          font-size: 12px;
+          margin-top: 4px;
         }
         
         .avatar-input {
@@ -233,25 +347,64 @@ export default function ProfileSettings({ onClose }) {
         }
         
         .form-group label {
-          font-weight: 500;
-          color: #333;
+          font-weight: 600;
+          color: #1a365d;
           font-size: 14px;
         }
         
         .form-group input,
         .form-group textarea {
           padding: 12px 16px;
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 2px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           font-size: 14px;
           transition: all 0.3s ease;
+          background: #f7fafc;
+          color: #2d3748;
         }
         
         .form-group input:focus,
         .form-group textarea:focus {
           outline: none;
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #1a365d;
+          box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+        }
+        
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+          color: #a0aec0;
+        }
+        
+        .security-section {
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        
+        .security-section h3 {
+          margin: 0 0 16px 0;
+          color: #1a365d;
+          font-size: 16px;
+        }
+        
+        .btn-outline {
+          padding: 12px 20px;
+          border: 2px solid #1a365d;
+          background: transparent;
+          color: #1a365d;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          margin-bottom: 8px;
+          width: 100%;
+          font-size: 14px;
+        }
+        
+        .btn-outline:hover {
+          background: #1a365d;
+          color: white;
+          transform: translateY(-1px);
         }
         
         .modal-actions {
@@ -273,13 +426,13 @@ export default function ProfileSettings({ onClose }) {
         }
         
         .btn-primary {
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           color: white;
         }
         
         .btn-primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 8px 25px rgba(26, 54, 93, 0.3);
         }
         
         .btn-secondary {
@@ -289,6 +442,30 @@ export default function ProfileSettings({ onClose }) {
         
         .btn-secondary:hover {
           background: rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+          .modal-content.large {
+            width: 95vw;
+          }
+          
+          .profile-content {
+            padding: 16px;
+          }
+          
+          .avatar-circle {
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+          }
+          
+          .modal-actions {
+            flex-direction: column;
+          }
+          
+          .btn-primary, .btn-secondary {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

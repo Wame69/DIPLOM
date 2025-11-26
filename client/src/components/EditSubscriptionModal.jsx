@@ -1,77 +1,73 @@
-// components/EditSubscriptionModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
+import { useData } from '../contexts/DataContext.jsx';
 
 export default function EditSubscriptionModal({ subscription, onClose, onSave }) {
   const [form, setForm] = useState({
-    title: subscription.title || '',
-    price: subscription.price || '',
-    period: subscription.period || 'month',
-    category: subscription.category || 'Other',
-    start_date: subscription.start_date ? subscription.start_date.split('T')[0] : new Date().toISOString().split('T')[0],
-    active: subscription.active !== false
+    title: '',
+    price: '',
+    period: 'month',
+    startDate: '',
+    category: 'Streaming',
+    currency: 'RUB',
+    active: true
   });
-  
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { language } = useLanguage();
+  const { updateSubscription } = useData();
+
+  // Initialize form with subscription data
+  useEffect(() => {
+    if (subscription) {
+      setForm({
+        title: subscription.title || '',
+        price: subscription.price || '',
+        period: subscription.period || 'month',
+        startDate: subscription.start_date || subscription.startDate || new Date().toISOString().split('T')[0],
+        category: subscription.category || 'Streaming',
+        currency: subscription.currency || 'RUB',
+        active: subscription.active !== false
+      });
+    }
+  }, [subscription]);
 
   const translations = {
-    ru: {
-      editSubscription: 'Редактировать подписку',
-      title: 'Название',
-      price: 'Цена',
-      period: 'Период',
-      category: 'Категория',
-      startDate: 'Дата начала',
-      status: 'Статус',
-      active: 'Активна',
-      inactive: 'Неактивна',
-      monthly: 'Ежемесячно',
-      yearly: 'Ежегодно',
-      cancel: 'Отмена',
-      save: 'Сохранить',
-      requiredField: 'Это поле обязательно'
-    },
     en: {
       editSubscription: 'Edit Subscription',
       title: 'Title',
       price: 'Price',
       period: 'Period',
-      category: 'Category',
       startDate: 'Start Date',
-      status: 'Status',
+      category: 'Category',
+      currency: 'Currency',
       active: 'Active',
-      inactive: 'Inactive',
-      monthly: 'Monthly',
-      yearly: 'Yearly',
       cancel: 'Cancel',
-      save: 'Save',
-      requiredField: 'This field is required'
+      save: 'Save Changes',
+      saving: 'Saving...',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    },
+    ru: {
+      editSubscription: 'Редактировать подписку',
+      title: 'Название',
+      price: 'Цена',
+      period: 'Период',
+      startDate: 'Дата начала',
+      category: 'Категория',
+      currency: 'Валюта',
+      active: 'Активна',
+      cancel: 'Отмена',
+      save: 'Сохранить изменения',
+      saving: 'Сохранение...',
+      monthly: 'Ежемесячно',
+      yearly: 'Ежегодно'
     }
   };
 
   const t = translations[language];
 
   const categoryOptions = {
-    ru: [
-      { value: 'Streaming', label: 'Стриминг' },
-      { value: 'Software', label: 'Софт' },
-      { value: 'Music', label: 'Музыка' },
-      { value: 'Cloud', label: 'Облако' },
-      { value: 'Gaming', label: 'Игры' },
-      { value: 'Education', label: 'Образование' },
-      { value: 'Health', label: 'Здоровье' },
-      { value: 'Finance', label: 'Финансы' },
-      { value: 'Shopping', label: 'Шоппинг' },
-      { value: 'Food', label: 'Еда' },
-      { value: 'Transport', label: 'Транспорт' },
-      { value: 'Utilities', label: 'Коммунальные' },
-      { value: 'Entertainment', label: 'Развлечения' },
-      { value: 'News', label: 'Новости' },
-      { value: 'Productivity', label: 'Продуктивность' },
-      { value: 'Security', label: 'Безопасность' },
-      { value: 'Social', label: 'Социальные сети' },
-      { value: 'Other', label: 'Другое' }
-    ],
     en: [
       { value: 'Streaming', label: 'Streaming' },
       { value: 'Software', label: 'Software' },
@@ -91,28 +87,64 @@ export default function EditSubscriptionModal({ subscription, onClose, onSave })
       { value: 'Security', label: 'Security' },
       { value: 'Social', label: 'Social' },
       { value: 'Other', label: 'Other' }
+    ],
+    ru: [
+      { value: 'Streaming', label: 'Стриминг' },
+      { value: 'Software', label: 'Софт' },
+      { value: 'Music', label: 'Музыка' },
+      { value: 'Cloud', label: 'Облако' },
+      { value: 'Gaming', label: 'Игры' },
+      { value: 'Education', label: 'Образование' },
+      { value: 'Health', label: 'Здоровье' },
+      { value: 'Finance', label: 'Финансы' },
+      { value: 'Shopping', label: 'Шоппинг' },
+      { value: 'Food', label: 'Еда' },
+      { value: 'Transport', label: 'Транспорт' },
+      { value: 'Utilities', label: 'Коммунальные' },
+      { value: 'Entertainment', label: 'Развлечения' },
+      { value: 'News', label: 'Новости' },
+      { value: 'Productivity', label: 'Продуктивность' },
+      { value: 'Security', label: 'Безопасность' },
+      { value: 'Social', label: 'Социальные сети' },
+      { value: 'Other', label: 'Другое' }
     ]
   };
+
+  const currencyOptions = [
+    { value: 'RUB', label: '₽ Rubles' },
+    { value: 'USD', label: '$ Dollars' },
+    { value: 'EUR', label: '€ Euro' }
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!form.title.trim() || !form.price) {
-      alert(t.requiredField);
+      alert('Please fill in all required fields');
       return;
     }
+    
+    setIsSubmitting(true);
 
     try {
-      await onSave({
-        ...subscription,
-        ...form,
+      await updateSubscription(subscription.id, {
+        title: form.title,
         price: parseFloat(form.price),
+        period: form.period,
+        start_date: form.startDate,
+        category: form.category,
+        currency: form.currency,
         active: form.active
       });
+
+      onSave && onSave();
       onClose();
+      
     } catch (error) {
-      console.error('Error saving subscription:', error);
-      alert('Ошибка при сохранении');
+      console.error('Error updating subscription:', error);
+      alert('Error updating subscription');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -120,111 +152,133 @@ export default function EditSubscriptionModal({ subscription, onClose, onSave })
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  if (!subscription) return null;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{t.editSubscription}</h2>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h2 className="modal-title">{t.editSubscription}</h2>
+          <button className="close-button" onClick={onClose} disabled={isSubmitting}>
+            ×
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label className="form-label">{t.title} *</label>
+            <label className="form-label">{t.title}</label>
             <input 
-              type="text"
+              type="text" 
               className="form-input"
               value={form.title}
               onChange={(e) => handleChange('title', e.target.value)}
-              required
+              required 
+              disabled={isSubmitting}
             />
           </div>
-
+          
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">{t.price} *</label>
+              <label className="form-label">{t.price}</label>
               <input 
-                type="number"
+                type="number" 
                 step="0.01"
                 className="form-input"
                 value={form.price}
                 onChange={(e) => handleChange('price', e.target.value)}
-                required
+                required 
+                disabled={isSubmitting}
               />
             </div>
             
             <div className="form-group">
-              <label className="form-label">{t.period}</label>
+              <label className="form-label">{t.currency}</label>
               <select 
                 className="form-select"
-                value={form.period}
-                onChange={(e) => handleChange('period', e.target.value)}
+                value={form.currency}
+                onChange={(e) => handleChange('currency', e.target.value)}
+                disabled={isSubmitting}
               >
-                <option value="month">{t.monthly}</option>
-                <option value="year">{t.yearly}</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">{t.category}</label>
-              <select 
-                className="form-select"
-                value={form.category}
-                onChange={(e) => handleChange('category', e.target.value)}
-              >
-                {categoryOptions[language].map(option => (
+                {currencyOptions.map(option => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">{t.period}</label>
+              <select 
+                className="form-select"
+                value={form.period}
+                onChange={(e) => handleChange('period', e.target.value)}
+                disabled={isSubmitting}
+              >
+                <option value="month">{t.monthly}</option>
+                <option value="year">{t.yearly}</option>
+              </select>
+            </div>
             
             <div className="form-group">
               <label className="form-label">{t.startDate}</label>
               <input 
-                type="date"
+                type="date" 
                 className="form-input"
-                value={form.start_date}
-                onChange={(e) => handleChange('start_date', e.target.value)}
+                value={form.startDate}
+                onChange={(e) => handleChange('startDate', e.target.value)}
+                required 
+                disabled={isSubmitting}
               />
             </div>
           </div>
-
+          
           <div className="form-group">
-            <label className="form-label">{t.status}</label>
-            <div className="radio-group">
-              <label className="radio-label">
-                <input 
-                  type="radio"
-                  name="active"
-                  checked={form.active}
-                  onChange={() => handleChange('active', true)}
-                />
-                <span className="radio-custom"></span>
-                {t.active}
-              </label>
-              <label className="radio-label">
-                <input 
-                  type="radio"
-                  name="active"
-                  checked={!form.active}
-                  onChange={() => handleChange('active', false)}
-                />
-                <span className="radio-custom"></span>
-                {t.inactive}
-              </label>
-            </div>
+            <label className="form-label">{t.category}</label>
+            <select 
+              className="form-select"
+              value={form.category}
+              onChange={(e) => handleChange('category', e.target.value)}
+              disabled={isSubmitting}
+            >
+              {categoryOptions[language].map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-
+          
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input 
+                type="checkbox"
+                checked={form.active}
+                onChange={(e) => handleChange('active', e.target.checked)}
+                disabled={isSubmitting}
+              />
+              <span className="checkbox-custom"></span>
+              {t.active}
+            </label>
+          </div>
+          
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button 
+              type="button" 
+              className="btn btn-cancel" 
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               {t.cancel}
             </button>
-            <button type="submit" className="btn btn-primary">
-              {t.save}
+            <button 
+              type="submit" 
+              className="btn btn-save"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? t.saving : t.save}
             </button>
           </div>
         </form>
@@ -237,193 +291,208 @@ export default function EditSubscriptionModal({ subscription, onClose, onSave })
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.5);
-          backdrop-filter: blur(5px);
+          background: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
           padding: 20px;
         }
-        
+
         .modal-content {
           background: white;
-          border-radius: 20px;
-          padding: 0;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
           width: 100%;
           max-width: 500px;
           max-height: 90vh;
-          overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          overflow: auto;
         }
-        
+
         .modal-header {
-          padding: 24px;
-          border-bottom: 1px solid rgba(0,0,0,0.1);
           display: flex;
           justify-content: space-between;
           align-items: center;
+          padding: 24px;
+          border-bottom: 1px solid #e2e8f0;
         }
-        
-        .modal-header h2 {
+
+        .modal-title {
           margin: 0;
-          color: #333;
-          font-size: 24px;
+          font-size: 20px;
+          font-weight: 600;
+          color: #2d3748;
         }
-        
-        .close-btn {
+
+        .close-button {
           background: none;
           border: none;
           font-size: 24px;
           cursor: pointer;
-          color: #666;
+          color: #718096;
           padding: 0;
           width: 32px;
           height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 8px;
+          border-radius: 6px;
+          transition: all 0.2s ease;
         }
-        
-        .close-btn:hover {
-          background: rgba(0,0,0,0.05);
+
+        .close-button:hover:not(:disabled) {
+          background: #f7fafc;
+          color: #4a5568;
         }
-        
+
+        .close-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
         .modal-form {
           padding: 24px;
-          max-height: calc(90vh - 80px);
-          overflow-y: auto;
         }
-        
+
         .form-group {
           margin-bottom: 20px;
         }
-        
+
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-        
+
         .form-label {
           display: block;
           margin-bottom: 8px;
-          font-weight: 600;
-          color: #333;
+          font-weight: 500;
+          color: #4a5568;
           font-size: 14px;
         }
-        
+
         .form-input, .form-select {
           width: 100%;
           padding: 12px 16px;
-          border: 2px solid rgba(0,0,0,0.1);
-          border-radius: 12px;
+          border: 2px solid #e2e8f0;
+          border-radius: 8px;
           font-size: 16px;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
           background: white;
         }
-        
+
         .form-input:focus, .form-select:focus {
           outline: none;
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          border-color: #4299e1;
+          box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
         }
-        
-        .radio-group {
-          display: flex;
-          gap: 20px;
+
+        .form-input:disabled, .form-select:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background: #f7fafc;
         }
-        
-        .radio-label {
+
+        .checkbox-label {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
           cursor: pointer;
           font-weight: 500;
+          color: #4a5568;
         }
-        
-        .radio-label input {
+
+        .checkbox-label input {
           display: none;
         }
-        
-        .radio-custom {
-          width: 18px;
-          height: 18px;
-          border: 2px solid #ddd;
-          border-radius: 50%;
+
+        .checkbox-custom {
+          width: 20px;
+          height: 20px;
+          border: 2px solid #e2e8f0;
+          border-radius: 4px;
           position: relative;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
         }
-        
-        .radio-label input:checked + .radio-custom {
-          border-color: #667eea;
-          background: #667eea;
+
+        .checkbox-label input:checked + .checkbox-custom {
+          background: #4299e1;
+          border-color: #4299e1;
         }
-        
-        .radio-label input:checked + .radio-custom::after {
-          content: '';
+
+        .checkbox-label input:checked + .checkbox-custom::after {
+          content: '✓';
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 8px;
-          height: 8px;
-          background: white;
-          border-radius: 50%;
+          color: white;
+          font-size: 12px;
+          font-weight: bold;
         }
-        
+
+        .checkbox-label input:disabled + .checkbox-custom {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .modal-actions {
           display: flex;
           gap: 12px;
           justify-content: flex-end;
           margin-top: 32px;
-          padding-top: 20px;
-          border-top: 1px solid rgba(0,0,0,0.1);
+          padding-top: 24px;
+          border-top: 1px solid #e2e8f0;
         }
-        
+
         .btn {
           padding: 12px 24px;
           border: none;
-          border-radius: 12px;
+          border-radius: 8px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
           min-width: 100px;
         }
-        
-        .btn-primary {
-          background: linear-gradient(135deg, #667eea, #764ba2);
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .btn-save {
+          background: #4299e1;
           color: white;
         }
-        
-        .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+
+        .btn-save:not(:disabled):hover {
+          background: #3182ce;
         }
-        
-        .btn-secondary {
-          background: rgba(0,0,0,0.05);
-          color: #333;
+
+        .btn-cancel {
+          background: #f7fafc;
+          color: #4a5568;
+          border: 2px solid #e2e8f0;
         }
-        
-        .btn-secondary:hover {
-          background: rgba(0,0,0,0.1);
+
+        .btn-cancel:not(:disabled):hover {
+          background: #edf2f7;
+          border-color: #cbd5e0;
         }
-        
+
         @media (max-width: 768px) {
+          .modal-content {
+            max-width: 100%;
+          }
+          
           .form-row {
             grid-template-columns: 1fr;
           }
           
-          .radio-group {
-            flex-direction: column;
-            gap: 12px;
-          }
-          
           .modal-actions {
-            flex-direction: column;
+            flex-direction: column-reverse;
           }
           
           .btn {

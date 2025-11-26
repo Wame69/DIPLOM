@@ -1,69 +1,127 @@
 // components/AboutApp.jsx
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext.jsx';
 
 export default function AboutApp({ onClose }) {
+  const { language } = useLanguage();
+
+  const translations = {
+    ru: {
+      aboutApp: 'О приложении',
+      appName: 'Evans',
+      version: 'Версия 2.0.0',
+      description: 'Инновационная платформа для управления подписками с AI-помощником и передовыми технологиями 2025 года',
+      ourFeatures: 'Наши возможности',
+      stats: 'Evans в цифрах',
+      ourTeam: 'Наша команда',
+      downloadApp: '📱 Скачать приложение',
+      visitWebsite: '🌐 Посетить сайт',
+      termsOfUse: '📝 Условия использования',
+      privacyPolicy: '🔒 Политика конфиденциальности',
+      users: 'пользователей',
+      subscriptions: 'подписок',
+      saved: 'сэкономлено',
+      availability: 'доступность'
+    },
+    en: {
+      aboutApp: 'About App',
+      appName: 'Evans',
+      version: 'Version 2.0.0',
+      description: 'Innovative subscription management platform with AI assistant and cutting-edge 2025 technologies',
+      ourFeatures: 'Our Features',
+      stats: 'Evans in Numbers',
+      ourTeam: 'Our Team',
+      downloadApp: '📱 Download App',
+      visitWebsite: '🌐 Visit Website',
+      termsOfUse: '📝 Terms of Use',
+      privacyPolicy: '🔒 Privacy Policy',
+      users: 'users',
+      subscriptions: 'subscriptions',
+      saved: 'saved',
+      availability: 'availability'
+    }
+  };
+
+  const t = translations[language];
+
   const features = [
     {
       icon: '🤖',
       title: 'AI Помощник',
-      description: 'Умные рекомендации по оптимизации ваших подписок'
+      description: language === 'ru' ? 'Умные рекомендации по оптимизации ваших подписок' : 'Smart recommendations for optimizing your subscriptions'
     },
     {
       icon: '🎤',
-      title: 'Голосовые команды',
-      description: 'Управление подписками с помощью голоса'
+      title: language === 'ru' ? 'Голосовые команды' : 'Voice Commands',
+      description: language === 'ru' ? 'Управление подписками с помощью голоса' : 'Voice-controlled subscription management'
     },
     {
       icon: '📊',
-      title: '3D Аналитика',
-      description: 'Продвинутая визуализация ваших расходов'
+      title: language === 'ru' ? '3D Аналитика' : '3D Analytics',
+      description: language === 'ru' ? 'Продвинутая визуализация ваших расходов' : 'Advanced visualization of your expenses'
     },
     {
       icon: '🔔',
-      title: 'Умные уведомления',
-      description: 'Автоматические напоминания о продлении'
+      title: language === 'ru' ? 'Умные уведомления' : 'Smart Notifications',
+      description: language === 'ru' ? 'Автоматические напоминания о продлении' : 'Automatic renewal reminders'
     }
   ];
 
   const team = [
     {
       name: 'Алексей Петров',
-      role: 'Главный разработчик',
+      role: language === 'ru' ? 'Главный разработчик' : 'Lead Developer',
       avatar: '👨‍💻'
     },
     {
       name: 'Мария Иванова',
-      role: 'UI/UX дизайнер',
+      role: language === 'ru' ? 'UI/UX дизайнер' : 'UI/UX Designer',
       avatar: '👩‍🎨'
     },
     {
       name: 'Дмитрий Сидоров',
-      role: 'AI инженер',
+      role: language === 'ru' ? 'AI инженер' : 'AI Engineer',
       avatar: '🤖'
     }
   ];
+
+  const stats = [
+    { number: '10K+', label: t.users },
+    { number: '50K+', label: t.subscriptions },
+    { number: '5M+ ₽', label: t.saved },
+    { number: '99.9%', label: t.availability }
+  ];
+
+  const handleLinkClick = (linkType) => {
+    const messages = {
+      download: language === 'ru' ? 'Скачивание приложения' : 'Downloading app',
+      website: language === 'ru' ? 'Открытие сайта' : 'Opening website',
+      terms: language === 'ru' ? 'Условия использования' : 'Terms of use',
+      privacy: language === 'ru' ? 'Политика конфиденциальности' : 'Privacy policy'
+    };
+    alert(`${messages[linkType]} ${language === 'ru' ? 'в разработке' : 'in development'}`);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content large" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>О приложении</h2>
+          <h2>{t.aboutApp}</h2>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         
         <div className="about-content">
           <div className="app-hero">
             <div className="app-icon">🚀</div>
-            <h1>Evens</h1>
-            <p className="version">Версия 2.0.0</p>
+            <h1>{t.appName}</h1>
+            <p className="version">{t.version}</p>
             <p className="description">
-              Инновационная платформа для управления подписками с AI-помощником 
-              и передовыми технологиями 2025 года
+              {t.description}
             </p>
           </div>
           
           <div className="features-section">
-            <h3>Наши возможности</h3>
+            <h3>{t.ourFeatures}</h3>
             <div className="features-grid">
               {features.map((feature, index) => (
                 <div key={index} className="feature-item">
@@ -76,29 +134,19 @@ export default function AboutApp({ onClose }) {
           </div>
           
           <div className="stats-section">
-            <h3>Evens в цифрах</h3>
+            <h3>{t.stats}</h3>
             <div className="stats-grid">
-              <div className="stat-item">
-                <div className="stat-number">10K+</div>
-                <div className="stat-label">пользователей</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">50K+</div>
-                <div className="stat-label">подписок</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">5M+ ₽</div>
-                <div className="stat-label">сэкономлено</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">99.9%</div>
-                <div className="stat-label">доступность</div>
-              </div>
+              {stats.map((stat, index) => (
+                <div key={index} className="stat-item">
+                  <div className="stat-number">{stat.number}</div>
+                  <div className="stat-label">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
           
           <div className="team-section">
-            <h3>Наша команда</h3>
+            <h3>{t.ourTeam}</h3>
             <div className="team-grid">
               {team.map((member, index) => (
                 <div key={index} className="team-member">
@@ -111,10 +159,18 @@ export default function AboutApp({ onClose }) {
           </div>
           
           <div className="links-section">
-            <button className="link-btn">📱 Скачать приложение</button>
-            <button className="link-btn">🌐 Посетить сайт</button>
-            <button className="link-btn">📝 Условия использования</button>
-            <button className="link-btn">🔒 Политика конфиденциальности</button>
+            <button className="link-btn" onClick={() => handleLinkClick('download')}>
+              {t.downloadApp}
+            </button>
+            <button className="link-btn" onClick={() => handleLinkClick('website')}>
+              {t.visitWebsite}
+            </button>
+            <button className="link-btn" onClick={() => handleLinkClick('terms')}>
+              {t.termsOfUse}
+            </button>
+            <button className="link-btn" onClick={() => handleLinkClick('privacy')}>
+              {t.privacyPolicy}
+            </button>
           </div>
         </div>
       </div>
@@ -159,7 +215,8 @@ export default function AboutApp({ onClose }) {
         
         .modal-header h2 {
           margin: 0;
-          color: #333;
+          color: #1a365d;
+          font-size: 24px;
         }
         
         .close-btn {
@@ -201,24 +258,27 @@ export default function AboutApp({ onClose }) {
         .app-hero h1 {
           margin: 0 0 8px 0;
           font-size: 48px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+          font-weight: 800;
         }
         
         .version {
           margin: 0 0 16px 0;
-          color: #666;
+          color: #a0aec0;
           font-size: 14px;
+          font-weight: 500;
         }
         
         .description {
           margin: 0;
-          color: #666;
+          color: #4a5568;
           line-height: 1.6;
           max-width: 500px;
           margin-left: auto;
           margin-right: auto;
+          font-size: 16px;
         }
         
         .features-section {
@@ -227,8 +287,9 @@ export default function AboutApp({ onClose }) {
         
         .features-section h3 {
           margin: 0 0 24px 0;
-          color: #333;
+          color: #1a365d;
           text-align: center;
+          font-size: 24px;
         }
         
         .features-grid {
@@ -239,16 +300,17 @@ export default function AboutApp({ onClose }) {
         
         .feature-item {
           padding: 24px;
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid rgba(226, 232, 240, 0.8);
           border-radius: 16px;
           text-align: center;
           transition: all 0.3s ease;
+          background: #f7fafc;
         }
         
         .feature-item:hover {
           transform: translateY(-5px);
-          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
-          border-color: #667eea;
+          box-shadow: 0 10px 30px rgba(26, 54, 93, 0.1);
+          border-color: #1a365d;
         }
         
         .feature-icon {
@@ -258,12 +320,13 @@ export default function AboutApp({ onClose }) {
         
         .feature-item h4 {
           margin: 0 0 8px 0;
-          color: #333;
+          color: #1a365d;
+          font-size: 18px;
         }
         
         .feature-item p {
           margin: 0;
-          color: #666;
+          color: #4a5568;
           font-size: 14px;
           line-height: 1.5;
         }
@@ -274,8 +337,9 @@ export default function AboutApp({ onClose }) {
         
         .stats-section h3 {
           margin: 0 0 24px 0;
-          color: #333;
+          color: #1a365d;
           text-align: center;
+          font-size: 24px;
         }
         
         .stats-grid {
@@ -287,7 +351,7 @@ export default function AboutApp({ onClose }) {
         .stat-item {
           text-align: center;
           padding: 20px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           border-radius: 12px;
           color: white;
         }
@@ -301,6 +365,8 @@ export default function AboutApp({ onClose }) {
         .stat-label {
           font-size: 12px;
           opacity: 0.9;
+          text-transform: uppercase;
+          font-weight: 500;
         }
         
         .team-section {
@@ -309,8 +375,9 @@ export default function AboutApp({ onClose }) {
         
         .team-section h3 {
           margin: 0 0 24px 0;
-          color: #333;
+          color: #1a365d;
           text-align: center;
+          font-size: 24px;
         }
         
         .team-grid {
@@ -322,8 +389,9 @@ export default function AboutApp({ onClose }) {
         .team-member {
           text-align: center;
           padding: 20px;
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
+          background: #f7fafc;
         }
         
         .member-avatar {
@@ -333,12 +401,13 @@ export default function AboutApp({ onClose }) {
         
         .team-member h4 {
           margin: 0 0 4px 0;
-          color: #333;
+          color: #1a365d;
+          font-size: 16px;
         }
         
         .team-member p {
           margin: 0;
-          color: #666;
+          color: #4a5568;
           font-size: 14px;
         }
         
@@ -350,19 +419,21 @@ export default function AboutApp({ onClose }) {
         
         .link-btn {
           padding: 16px 20px;
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid rgba(226, 232, 240, 0.8);
           border-radius: 12px;
           background: white;
           cursor: pointer;
           transition: all 0.3s ease;
           font-size: 14px;
           text-align: left;
+          color: #4a5568;
         }
         
         .link-btn:hover {
-          background: rgba(102, 126, 234, 0.1);
-          border-color: #667eea;
-          color: #667eea;
+          background: rgba(26, 54, 93, 0.1);
+          border-color: #1a365d;
+          color: #1a365d;
+          transform: translateY(-2px);
         }
         
         @media (max-width: 768px) {
@@ -383,6 +454,16 @@ export default function AboutApp({ onClose }) {
           }
           
           .links-section {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .team-grid {
             grid-template-columns: 1fr;
           }
         }

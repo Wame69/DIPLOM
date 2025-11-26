@@ -1,83 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
+import { useData } from '../contexts/DataContext.jsx';
 
-export default function AddModal({ onClose }) {
+export default function AddModal({ onClose, initialData = null }) {
   const [form, setForm] = useState({
     title: '',
     price: '',
     period: 'month',
     startDate: new Date().toISOString().split('T')[0],
     category: 'Streaming',
+    service_type: 'other',
+    provider: '',
+    currency: 'RUB',
     reminder: '7',
-    customReminder: ''
+    customReminder: '',
+    type: 'subscription'
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { language } = useLanguage();
+  const { addSubscription, addService } = useData();
+
+  // Initialize form
+  useEffect(() => {
+    if (initialData) {
+      setForm(prev => ({
+        ...prev,
+        ...initialData,
+        startDate: initialData.startDate || new Date().toISOString().split('T')[0],
+        type: initialData.type || 'subscription'
+      }));
+    }
+  }, [initialData]);
 
   const translations = {
-    ru: {
-      addSubscription: 'Добавить подписку',
-      title: 'Название',
-      enterTitle: 'Введите название подписки',
-      price: 'Цена',
-      examplePrice: 'например 299 ₽',
-      period: 'Период',
-      startDate: 'Дата начала',
-      category: 'Категория',
-      reminders: 'Напоминания',
-      days: 'дн.',
-      custom: 'свой',
-      number: 'число',
-      cancel: 'Отмена',
-      save: 'Сохранить',
-      monthly: 'Ежемесячно',
-      yearly: 'Ежегодно',
-      addError: 'Ошибка при добавлении подписки'
-    },
     en: {
       addSubscription: 'Add Subscription',
+      addService: 'Add Service',
       title: 'Title',
-      enterTitle: 'Enter subscription title',
+      enterTitle: 'Enter title',
       price: 'Price',
-      examplePrice: 'example: 299 ₽',
+      examplePrice: 'example: 299',
       period: 'Period',
       startDate: 'Start Date',
       category: 'Category',
+      serviceType: 'Service type',
+      provider: 'Provider',
+      currency: 'Currency',
       reminders: 'Reminders',
       days: 'days',
       custom: 'custom',
       number: 'number',
       cancel: 'Cancel',
       save: 'Save',
+      saving: 'Saving...',
       monthly: 'Monthly',
       yearly: 'Yearly',
-      addError: 'Error adding subscription'
+      rubles: 'Rubles',
+      dollars: 'Dollars',
+      euro: 'Euro',
+      subscription: 'Subscription',
+      utility: 'Utility',
+      internet: 'Internet',
+      mobile: 'Mobile',
+      tv: 'TV',
+      insurance: 'Insurance',
+      otherService: 'Other service',
+      type: 'Type',
+      selectType: 'Select type',
+      requiredField: 'Required field'
+    },
+    ru: {
+      addSubscription: 'Добавить подписку',
+      addService: 'Добавить услугу',
+      title: 'Название',
+      enterTitle: 'Введите название',
+      price: 'Цена',
+      examplePrice: 'например 299',
+      period: 'Период',
+      startDate: 'Дата начала',
+      category: 'Категория',
+      serviceType: 'Тип услуги',
+      provider: 'Провайдер',
+      currency: 'Валюта',
+      reminders: 'Напоминания',
+      days: 'дн.',
+      custom: 'свой',
+      number: 'число',
+      cancel: 'Отмена',
+      save: 'Сохранить',
+      saving: 'Сохранение...',
+      monthly: 'Ежемесячно',
+      yearly: 'Ежегодно',
+      rubles: 'Рубли',
+      dollars: 'Доллары',
+      euro: 'Евро',
+      subscription: 'Подписка',
+      utility: 'Коммунальные',
+      internet: 'Интернет',
+      mobile: 'Мобильная связь',
+      tv: 'Телевидение',
+      insurance: 'Страхование',
+      otherService: 'Другая услуга',
+      type: 'Тип',
+      selectType: 'Выберите тип',
+      requiredField: 'Обязательное поле'
     }
   };
 
   const t = translations[language];
 
   const categoryOptions = {
-    ru: [
-      { value: 'Streaming', label: 'Стриминг' },
-      { value: 'Software', label: 'Софт' },
-      { value: 'Music', label: 'Музыка' },
-      { value: 'Cloud', label: 'Облако' },
-      { value: 'Gaming', label: 'Игры' },
-      { value: 'Education', label: 'Образование' },
-      { value: 'Health', label: 'Здоровье' },
-      { value: 'Finance', label: 'Финансы' },
-      { value: 'Shopping', label: 'Шоппинг' },
-      { value: 'Food', label: 'Еда' },
-      { value: 'Transport', label: 'Транспорт' },
-      { value: 'Utilities', label: 'Коммунальные' },
-      { value: 'Entertainment', label: 'Развлечения' },
-      { value: 'News', label: 'Новости' },
-      { value: 'Productivity', label: 'Продуктивность' },
-      { value: 'Security', label: 'Безопасность' },
-      { value: 'Social', label: 'Социальные сети' },
-      { value: 'Other', label: 'Другое' }
-    ],
     en: [
       { value: 'Streaming', label: 'Streaming' },
       { value: 'Software', label: 'Software' },
@@ -97,13 +130,75 @@ export default function AddModal({ onClose }) {
       { value: 'Security', label: 'Security' },
       { value: 'Social', label: 'Social' },
       { value: 'Other', label: 'Other' }
+    ],
+    ru: [
+      { value: 'Streaming', label: 'Стриминг' },
+      { value: 'Software', label: 'Софт' },
+      { value: 'Music', label: 'Музыка' },
+      { value: 'Cloud', label: 'Облако' },
+      { value: 'Gaming', label: 'Игры' },
+      { value: 'Education', label: 'Образование' },
+      { value: 'Health', label: 'Здоровье' },
+      { value: 'Finance', label: 'Финансы' },
+      { value: 'Shopping', label: 'Шоппинг' },
+      { value: 'Food', label: 'Еда' },
+      { value: 'Transport', label: 'Транспорт' },
+      { value: 'Utilities', label: 'Коммунальные' },
+      { value: 'Entertainment', label: 'Развлечения' },
+      { value: 'News', label: 'Новости' },
+      { value: 'Productivity', label: 'Продуктивность' },
+      { value: 'Security', label: 'Безопасность' },
+      { value: 'Social', label: 'Социальные сети' },
+      { value: 'Other', label: 'Другое' }
     ]
   };
 
+  const serviceTypeOptions = {
+    en: [
+      { value: 'utility', label: 'Utility' },
+      { value: 'internet', label: 'Internet' },
+      { value: 'mobile', label: 'Mobile' },
+      { value: 'tv', label: 'TV' },
+      { value: 'insurance', label: 'Insurance' },
+      { value: 'other', label: 'Other service' }
+    ],
+    ru: [
+      { value: 'utility', label: 'Коммунальная услуга' },
+      { value: 'internet', label: 'Интернет' },
+      { value: 'mobile', label: 'Мобильная связь' },
+      { value: 'tv', label: 'Телевидение' },
+      { value: 'insurance', label: 'Страхование' },
+      { value: 'other', label: 'Другая услуга' }
+    ]
+  };
+
+  const currencyOptions = [
+    { value: 'RUB', label: t.rubles, symbol: '₽' },
+    { value: 'USD', label: t.dollars, symbol: '$' },
+    { value: 'EUR', label: t.euro, symbol: '€' }
+  ];
+
+  const typeOptions = [
+    { value: 'subscription', label: t.subscription },
+    { value: 'service', label: t.utility }
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('ev_token');
     
+    // Validation
+    if (!form.title.trim()) {
+      alert(`${t.title} - ${t.requiredField}`);
+      return;
+    }
+    
+    if (!form.price || parseFloat(form.price) <= 0) {
+      alert(`${t.price} - ${t.requiredField}`);
+      return;
+    }
+    
+    setIsSubmitting(true);
+
     try {
       let reminderDays = [];
       
@@ -113,31 +208,58 @@ export default function AddModal({ onClose }) {
         reminderDays = [parseInt(form.reminder)];
       }
       
-      const res = await fetch('/api/subscriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({
-          title: form.title,
-          price: parseFloat(form.price) || 0,
-          period: form.period,
-          startDate: form.startDate,
-          category: form.category,
-          reminder: JSON.stringify(reminderDays),
-          currency: 'RUB'
-        })
-      });
+      const itemData = {
+        title: form.title,
+        price: parseFloat(form.price) || 0,
+        period: form.period,
+        start_date: form.startDate,
+        currency: form.currency,
+        reminder: reminderDays,
+      };
 
-      if (!res.ok) throw new Error('Ошибка при добавлении');
+      if (form.type === 'service') {
+        itemData.service_type = form.service_type;
+        itemData.provider = form.provider;
+        addService(itemData);
+      } else {
+        itemData.category = form.category;
+        addSubscription(itemData);
+      }
+
+      // Show success notification
+      showSuccessNotification();
       
+      // Close modal
       onClose();
-      window.location.reload();
+      
     } catch (error) {
-      console.error('Ошибка:', error);
-      alert(t.addError);
+      console.error('Error:', error);
+      alert('Error saving');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const showSuccessNotification = () => {
+    const notification = document.createElement('div');
+    notification.className = 'success-notification';
+    notification.innerHTML = `
+      <div class="notification-content">
+        <span class="notification-icon">✅</span>
+        <span class="notification-text">
+          ${form.type === 'service' ? t.addService : t.addSubscription} successfully added!
+        </span>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.classList.add('fade-out');
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
   };
 
   const handleChange = (field, value) => {
@@ -151,16 +273,41 @@ export default function AddModal({ onClose }) {
     }));
   };
 
+  const isService = form.type === 'service';
+  const modalTitle = isService ? t.addService : t.addSubscription;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">{t.addSubscription}</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+          <div className="modal-title-section">
+            <span className="modal-icon">{isService ? '🏠' : '📱'}</span>
+            <h2 className="modal-title">{modalTitle}</h2>
+          </div>
+          <button className="close-button" onClick={onClose} disabled={isSubmitting}>
+            <span className="close-icon">×</span>
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="modal-form">
-          {/* Название */}
+          {/* Type */}
+          <div className="form-group">
+            <label className="form-label">{t.type}</label>
+            <select 
+              className="form-select"
+              value={form.type}
+              onChange={(e) => handleChange('type', e.target.value)}
+              disabled={isSubmitting}
+            >
+              {typeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Title */}
           <div className="form-group">
             <label className="form-label">{t.title}</label>
             <input 
@@ -170,24 +317,44 @@ export default function AddModal({ onClose }) {
               onChange={(e) => handleChange('title', e.target.value)}
               placeholder={t.enterTitle}
               required 
+              disabled={isSubmitting}
             />
           </div>
           
-          {/* Цена */}
-          <div className="form-group">
-            <label className="form-label">{t.price}</label>
-            <input 
-              type="number" 
-              step="0.01"
-              className="form-input"
-              value={form.price}
-              onChange={(e) => handleChange('price', e.target.value)}
-              placeholder={t.examplePrice}
-              required 
-            />
+          {/* Price and Currency */}
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">{t.price}</label>
+              <input 
+                type="number" 
+                step="0.01"
+                className="form-input"
+                value={form.price}
+                onChange={(e) => handleChange('price', e.target.value)}
+                placeholder={t.examplePrice}
+                required 
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <div className="form-group">
+              <label className="form-label">{t.currency}</label>
+              <select 
+                className="form-select"
+                value={form.currency}
+                onChange={(e) => handleChange('currency', e.target.value)}
+                disabled={isSubmitting}
+              >
+                {currencyOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} ({option.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           
-          {/* Период и Дата начала в одной строке */}
+          {/* Period and Start Date */}
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">{t.period}</label>
@@ -195,6 +362,7 @@ export default function AddModal({ onClose }) {
                 className="form-select"
                 value={form.period}
                 onChange={(e) => handleChange('period', e.target.value)}
+                disabled={isSubmitting}
               >
                 <option value="month">{t.monthly}</option>
                 <option value="year">{t.yearly}</option>
@@ -209,19 +377,23 @@ export default function AddModal({ onClose }) {
                 value={form.startDate}
                 onChange={(e) => handleChange('startDate', e.target.value)}
                 required 
+                disabled={isSubmitting}
               />
             </div>
           </div>
           
-          {/* Категория */}
+          {/* Category or Service Type */}
           <div className="form-group">
-            <label className="form-label">{t.category}</label>
+            <label className="form-label">
+              {isService ? t.serviceType : t.category}
+            </label>
             <select 
               className="form-select"
-              value={form.category}
-              onChange={(e) => handleChange('category', e.target.value)}
+              value={isService ? form.service_type : form.category}
+              onChange={(e) => handleChange(isService ? 'service_type' : 'category', e.target.value)}
+              disabled={isSubmitting}
             >
-              {categoryOptions[language].map(option => (
+              {(isService ? serviceTypeOptions[language] : categoryOptions[language]).map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -229,7 +401,22 @@ export default function AddModal({ onClose }) {
             </select>
           </div>
           
-          {/* Напоминания */}
+          {/* Provider (only for services) */}
+          {isService && (
+            <div className="form-group">
+              <label className="form-label">{t.provider}</label>
+              <input 
+                type="text" 
+                className="form-input"
+                value={form.provider}
+                onChange={(e) => handleChange('provider', e.target.value)}
+                placeholder="Enter provider name"
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
+          
+          {/* Reminders */}
           <div className="form-group">
             <label className="form-label">{t.reminders}</label>
             <div className="reminder-section">
@@ -242,12 +429,12 @@ export default function AddModal({ onClose }) {
                       checked={form.reminder === day.toString()}
                       onChange={() => handleReminderChange(day.toString())}
                       className="radio-input"
+                      disabled={isSubmitting}
                     />
                     <span className="checkbox-label">{day} {t.days}</span>
                   </label>
                 ))}
                 
-                {/* Свое число с кругом */}
                 <label className="reminder-checkbox custom-reminder-option">
                   <input 
                     type="radio"
@@ -255,6 +442,7 @@ export default function AddModal({ onClose }) {
                     checked={form.reminder === 'custom'}
                     onChange={() => handleReminderChange('custom')}
                     className="radio-input"
+                    disabled={isSubmitting}
                   />
                   <span className="checkbox-label">{t.custom}</span>
                   <div className="custom-input-container">
@@ -271,6 +459,7 @@ export default function AddModal({ onClose }) {
                       placeholder={t.number}
                       min="1"
                       max="30"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </label>
@@ -278,13 +467,29 @@ export default function AddModal({ onClose }) {
             </div>
           </div>
           
-          {/* Кнопки */}
+          {/* Buttons */}
           <div className="modal-actions">
-            <button type="button" className="btn btn-cancel" onClick={onClose}>
+            <button 
+              type="button" 
+              className="btn btn-cancel" 
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               {t.cancel}
             </button>
-            <button type="submit" className="btn btn-save">
-              {t.save}
+            <button 
+              type="submit" 
+              className="btn btn-save"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="loading-spinner"></div>
+                  {t.saving}
+                </>
+              ) : (
+                t.save
+              )}
             </button>
           </div>
         </form>
@@ -297,62 +502,109 @@ export default function AddModal({ onClose }) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
+          background: rgba(26, 54, 93, 0.6);
+          backdrop-filter: blur(8px);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
           padding: 20px;
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .modal-content {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(20px);
+          border-radius: 24px;
+          box-shadow: 0 20px 60px rgba(26, 54, 93, 0.3);
           width: 100%;
-          max-width: 480px;
+          max-width: 500px;
           max-height: 90vh;
           overflow: hidden;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { 
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
         .modal-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 24px 24px 0;
-          margin-bottom: 20px;
+          padding: 28px 28px 0;
+          margin-bottom: 24px;
+        }
+
+        .modal-title-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .modal-icon {
+          font-size: 24px;
         }
 
         .modal-title {
           margin: 0;
           font-size: 24px;
           font-weight: 700;
-          color: #8B4513;
+          color: #1a365d;
         }
 
         .close-button {
-          background: none;
-          border: none;
-          font-size: 28px;
-          color: #8B7355;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 12px;
           cursor: pointer;
-          padding: 0;
-          width: 32px;
-          height: 32px;
+          padding: 8px;
+          width: 40px;
+          height: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 6px;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
         }
 
-        .close-button:hover {
-          background: rgba(160, 82, 45, 0.1);
-          color: #8B4513;
+        .close-button:not(:disabled):hover {
+          background: #1a365d;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(26, 54, 93, 0.15);
+        }
+
+        .close-button:not(:disabled):hover .close-icon {
+          color: white;
+        }
+
+        .close-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .close-icon {
+          font-size: 20px;
+          color: #4a5568;
+          font-weight: 300;
+          transition: all 0.3s ease;
         }
 
         .modal-form {
-          padding: 0 24px 24px;
+          padding: 0 28px 28px;
           max-height: calc(90vh - 80px);
           overflow-y: auto;
         }
@@ -371,30 +623,37 @@ export default function AddModal({ onClose }) {
           display: block;
           margin-bottom: 8px;
           font-weight: 600;
-          color: #8B4513;
+          color: #1a365d;
           font-size: 14px;
         }
 
         .form-input, .form-select {
           width: 100%;
-          padding: 12px 16px;
-          border: 2px solid rgba(210, 180, 140, 0.4);
-          border-radius: 10px;
+          padding: 14px 16px;
+          border: 2px solid rgba(226, 232, 240, 0.8);
+          border-radius: 12px;
           font-size: 16px;
-          transition: all 0.2s;
-          background: white;
-          color: #8B7355;
+          transition: all 0.3s ease;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          color: #2d3748;
+          font-family: inherit;
         }
 
         .form-input:focus, .form-select:focus {
           outline: none;
-          border-color: #A0522D;
-          box-shadow: 0 0 0 3px rgba(160, 82, 45, 0.1);
+          border-color: #1a365d;
+          box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+          background: white;
+        }
+
+        .form-input:disabled, .form-select:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .form-input::placeholder {
-          color: #8B7355;
-          opacity: 0.7;
+          color: #a0aec0;
         }
 
         .reminder-section {
@@ -417,6 +676,11 @@ export default function AddModal({ onClose }) {
           cursor: pointer;
           padding: 8px 0;
           white-space: nowrap;
+          transition: all 0.3s ease;
+        }
+
+        .reminder-checkbox:hover .checkbox-label {
+          color: #1a365d;
         }
 
         .custom-reminder-option {
@@ -429,19 +693,20 @@ export default function AddModal({ onClose }) {
         .radio-input {
           width: 18px;
           height: 18px;
-          border: 2px solid rgba(210, 180, 140, 0.6);
+          border: 2px solid rgba(226, 232, 240, 0.8);
           border-radius: 50%;
           appearance: none;
           margin: 0;
           cursor: pointer;
           position: relative;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
           flex-shrink: 0;
+          background: rgba(255, 255, 255, 0.9);
         }
 
         .radio-input:checked {
-          background: #A0522D;
-          border-color: #A0522D;
+          background: #1a365d;
+          border-color: #1a365d;
         }
 
         .radio-input:checked::after {
@@ -456,38 +721,51 @@ export default function AddModal({ onClose }) {
           transform: translate(-50%, -50%);
         }
 
+        .radio-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .checkbox-label {
           font-size: 14px;
-          color: #8B7355;
+          color: #4a5568;
           white-space: nowrap;
+          transition: all 0.3s ease;
+          font-weight: 500;
         }
 
         .custom-input-container {
           flex: 1;
-          min-width: 100px;
+          min-width: 80px;
         }
 
         .custom-reminder-input {
           width: 100%;
           padding: 10px 12px;
-          border: 2px solid rgba(210, 180, 140, 0.4);
+          border: 2px solid rgba(226, 232, 240, 0.8);
           border-radius: 8px;
           font-size: 14px;
           text-align: center;
-          transition: all 0.2s;
-          background: white;
-          color: #8B7355;
+          transition: all 0.3s ease;
+          background: rgba(255, 255, 255, 0.9);
+          color: #2d3748;
+          font-family: inherit;
         }
 
         .custom-reminder-input:focus {
           outline: none;
-          border-color: #A0522D;
-          box-shadow: 0 0 0 2px rgba(160, 82, 45, 0.1);
+          border-color: #1a365d;
+          box-shadow: 0 0 0 2px rgba(26, 54, 93, 0.1);
+          background: white;
+        }
+
+        .custom-reminder-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .custom-reminder-input::placeholder {
-          color: #8B7355;
-          opacity: 0.7;
+          color: #a0aec0;
         }
 
         .modal-actions {
@@ -495,51 +773,88 @@ export default function AddModal({ onClose }) {
           gap: 12px;
           justify-content: flex-end;
           margin-top: 32px;
-          padding-top: 20px;
-          border-top: 1px solid rgba(210, 180, 140, 0.3);
+          padding-top: 24px;
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
         }
 
         .btn {
-          padding: 12px 24px;
+          padding: 14px 28px;
           border: none;
-          border-radius: 10px;
+          border-radius: 12px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.3s ease;
           min-width: 100px;
+          font-family: inherit;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none !important;
         }
 
         .btn-save {
-          background: linear-gradient(135deg, #A0522D, #8B4513);
+          background: linear-gradient(135deg, #1a365d, #2d3748);
           color: white;
+          box-shadow: 0 4px 15px rgba(26, 54, 93, 0.2);
         }
 
-        .btn-save:hover {
-          background: linear-gradient(135deg, #8B4513, #A0522D);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+        .btn-save:not(:disabled):hover {
+          background: linear-gradient(135deg, #2d3748, #1a365d);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(26, 54, 93, 0.3);
         }
 
         .btn-cancel {
-          background: white;
-          color: #8B7355;
-          border: 2px solid rgba(210, 180, 140, 0.4);
+          background: rgba(255, 255, 255, 0.9);
+          color: #4a5568;
+          border: 2px solid rgba(226, 232, 240, 0.8);
+          backdrop-filter: blur(10px);
         }
 
-        .btn-cancel:hover {
-          background: rgba(160, 82, 45, 0.1);
-          color: #8B4513;
-          border-color: #A0522D;
+        .btn-cancel:not(:disabled):hover {
+          background: rgba(26, 54, 93, 0.1);
+          color: #1a365d;
+          border-color: #1a365d;
+          transform: translateY(-2px);
+        }
+
+        .loading-spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid transparent;
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
           .modal-overlay {
-            padding: 10px;
+            padding: 16px;
           }
           
           .modal-content {
             max-width: 100%;
+            border-radius: 20px;
+          }
+          
+          .modal-header {
+            padding: 24px 24px 0;
+          }
+          
+          .modal-form {
+            padding: 0 24px 24px;
           }
           
           .form-row {
@@ -557,7 +872,7 @@ export default function AddModal({ onClose }) {
           }
           
           .custom-input-container {
-            min-width: 120px;
+            min-width: 100px;
             margin-left: auto;
           }
           
@@ -571,12 +886,12 @@ export default function AddModal({ onClose }) {
         }
 
         @media (max-width: 480px) {
-          .modal-form {
-            padding: 0 16px 16px;
+          .modal-header {
+            padding: 20px 20px 0;
           }
           
-          .modal-header {
-            padding: 20px 16px 0;
+          .modal-form {
+            padding: 0 20px 20px;
           }
           
           .reminder-checkboxes {
@@ -591,9 +906,53 @@ export default function AddModal({ onClose }) {
           }
           
           .custom-input-container {
-            min-width: 100px;
+            min-width: 80px;
             margin-left: 0;
           }
+        }
+      `}</style>
+
+      <style jsx global>{`
+        .success-notification {
+          position: fixed;
+          top: 100px;
+          right: 32px;
+          background: #38a169;
+          color: white;
+          padding: 16px 24px;
+          border-radius: 12px;
+          box-shadow: 0 8px 25px rgba(56, 161, 105, 0.3);
+          z-index: 10000;
+          animation: slideInRight 0.3s ease;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .notification-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
+        .notification-icon {
+          font-size: 18px;
+        }
+        
+        .notification-text {
+          font-weight: 500;
+        }
+        
+        .success-notification.fade-out {
+          animation: slideOutRight 0.3s ease forwards;
+        }
+        
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
         }
       `}</style>
     </div>
